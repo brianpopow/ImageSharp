@@ -2,15 +2,11 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Jpeg;
-using SixLabors.ImageSharp.Formats.Jpeg.GolangPort;
-using SixLabors.ImageSharp.Formats.Jpeg.PdfJsPort;
-using SixLabors.ImageSharp.Memory;
+using SixLabors.Memory;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Tests.Formats.Jpg.Utils;
 using SixLabors.ImageSharp.Tests.TestUtilities.ImageComparison;
@@ -36,7 +32,7 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
 
             if (!CustomToleranceValues.TryGetValue(file, out float tolerance))
             {
-                bool baseline = file.ToLower().Contains("baseline");
+                bool baseline = file.IndexOf("baseline", StringComparison.OrdinalIgnoreCase) >= 0;
                 tolerance = baseline ? BaselineTolerance : ProgressiveTolerance;
             }
 
@@ -52,6 +48,9 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
                     TestImages.Jpeg.Issues.BadZigZagProgressive385,
                     TestImages.Jpeg.Issues.NoEoiProgressive517,
                     TestImages.Jpeg.Issues.BadRstProgressive518,
+                    TestImages.Jpeg.Issues.InvalidEOI695,
+                    TestImages.Jpeg.Issues.ExifResizeOutOfRange696,
+                    TestImages.Jpeg.Issues.ExifGetString750Transform
                 };
 
             return !TestEnvironment.Is64BitProcess && largeImagesToSkipOn32Bit.Contains(provider.SourceFileOrDescription);
@@ -64,19 +63,15 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
 
         private ITestOutputHelper Output { get; }
 
-        private static GolangJpegDecoder GolangJpegDecoder => new GolangJpegDecoder();
-
-        private static PdfJsJpegDecoder PdfJsJpegDecoder => new PdfJsJpegDecoder();
-
-        private static JpegDecoder DefaultJpegDecoder => new JpegDecoder();
+        private static JpegDecoder JpegDecoder => new JpegDecoder();
 
         [Fact]
-        public void ParseStream_BasicPropertiesAreCorrect1_PdfJs()
+        public void ParseStream_BasicPropertiesAreCorrect()
         {
             byte[] bytes = TestFile.Create(TestImages.Jpeg.Progressive.Progress).Bytes;
             using (var ms = new MemoryStream(bytes))
             {
-                var decoder = new PdfJsJpegDecoderCore(Configuration.Default, new JpegDecoder());
+                var decoder = new JpegDecoderCore(Configuration.Default, new JpegDecoder());
                 decoder.ParseStream(ms);
 
                 // I don't know why these numbers are different. All I know is that the decoder works
@@ -89,9 +84,8 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
         public const string DecodeBaselineJpegOutputName = "DecodeBaselineJpeg";
 
         [Theory]
-        [WithFile(TestImages.Jpeg.Baseline.Calliphora, CommonNonDefaultPixelTypes, false)]
-        [WithFile(TestImages.Jpeg.Baseline.Calliphora, CommonNonDefaultPixelTypes, true)]
-        public void JpegDecoder_IsNotBoundToSinglePixelType<TPixel>(TestImageProvider<TPixel> provider, bool useOldDecoder)
+        [WithFile(TestImages.Jpeg.Baseline.Calliphora, CommonNonDefaultPixelTypes)]
+        public void JpegDecoder_IsNotBoundToSinglePixelType<TPixel>(TestImageProvider<TPixel> provider)
             where TPixel : struct, IPixel<TPixel>
         {
             if (SkipTest(provider))
@@ -100,10 +94,9 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
             }
 
             // For 32 bit test enviroments:
-            provider.Configuration.MemoryManager = ArrayPoolMemoryManager.CreateWithModeratePooling();
+            provider.Configuration.MemoryAllocator = ArrayPoolMemoryAllocator.CreateWithModeratePooling();
 
-            IImageDecoder decoder = useOldDecoder ? (IImageDecoder)GolangJpegDecoder : PdfJsJpegDecoder;
-            using (Image<TPixel> image = provider.GetImage(decoder))
+            using (Image<TPixel> image = provider.GetImage(JpegDecoder))
             {
                 image.DebugSave(provider);
 
@@ -111,7 +104,7 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
                 image.CompareToReferenceOutput(ImageComparer.Tolerant(BaselineTolerance), provider, appendPixelTypeToFileName: false);
             }
 
-            provider.Configuration.MemoryManager.ReleaseRetainedResources();
+            provider.Configuration.MemoryAllocator.ReleaseRetainedResources();
         }
 
         private string GetDifferenceInPercentageString<TPixel>(Image<TPixel> image, TestImageProvider<TPixel> provider)
@@ -125,34 +118,14 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
                 appendPixelTypeToFileName: false
                 ).SingleOrDefault();
 
-            if (report != null && report.TotalNormalizedDifference.HasValue)
+            if (report?.TotalNormalizedDifference != null)
             {
                 return report.DifferencePercentageString;
             }
 
             return "0%";
         }
-
-        private void CompareJpegDecodersImpl<TPixel>(TestImageProvider<TPixel> provider, string testName)
-            where TPixel : struct, IPixel<TPixel>
-        {
-            this.Output.WriteLine(provider.SourceFileOrDescription);
-            provider.Utility.TestName = testName;
-
-            using (Image<TPixel> image = provider.GetImage(GolangJpegDecoder))
-            {
-                string d = this.GetDifferenceInPercentageString(image, provider);
-
-                this.Output.WriteLine($"Difference using ORIGINAL decoder: {d}");
-            }
-
-            using (Image<TPixel> image = provider.GetImage(PdfJsJpegDecoder))
-            {
-                string d = this.GetDifferenceInPercentageString(image, provider);
-                this.Output.WriteLine($"Difference using PDFJS decoder: {d}");
-            }
-        }
-
+        
         // DEBUG ONLY!
         // The PDF.js output should be saved by "tests\ImageSharp.Tests\Formats\Jpg\pdfjs\jpeg-converter.htm"
         // into "\tests\Images\ActualOutput\JpegDecoderTests\"
@@ -174,8 +147,8 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
             var comparer = ImageComparer.Tolerant(0, 0);
 
             using (Image<TPixel> expectedImage = provider.GetReferenceOutputImage<TPixel>(appendPixelTypeToFileName: false))
-            using (var pdfJsOriginalResult = Image.Load(pdfJsOriginalResultPath))
-            using (var pdfJsPortResult = Image.Load(sourceBytes, PdfJsJpegDecoder))
+            using (var pdfJsOriginalResult = Image.Load<Rgba32>(pdfJsOriginalResultPath))
+            using (var pdfJsPortResult = Image.Load<Rgba32>(sourceBytes, JpegDecoder))
             {
                 ImageSimilarityReport originalReport = comparer.CompareImagesOrFrames(expectedImage, pdfJsOriginalResult);
                 ImageSimilarityReport portReport = comparer.CompareImagesOrFrames(expectedImage, pdfJsPortResult);

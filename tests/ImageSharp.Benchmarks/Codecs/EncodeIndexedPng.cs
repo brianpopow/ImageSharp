@@ -5,7 +5,8 @@ using System.IO;
 using BenchmarkDotNet.Attributes;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing.Quantization;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using SixLabors.ImageSharp.Tests;
 using CoreImage = SixLabors.ImageSharp.Image;
 
@@ -64,7 +65,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs
         {
             using (var memoryStream = new MemoryStream())
             {
-                var options = new PngEncoder { Quantizer = KnownQuantizers.Palette };
+                var options = new PngEncoder { Quantizer = KnownQuantizers.WebSafe };
                 this.bmpCore.SaveAsPng(memoryStream, options);
             }
         }
@@ -74,7 +75,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs
         {
             using (var memoryStream = new MemoryStream())
             {
-                var options = new PngEncoder { Quantizer = new PaletteQuantizer(false) };
+                var options = new PngEncoder { Quantizer = new WebSafePaletteQuantizer(false) };
                 this.bmpCore.SaveAsPng(memoryStream, options);
             }
         }

@@ -1,17 +1,16 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
+using System;
 using System.Text;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Provides methods to read ICC data types
     /// </summary>
     internal sealed partial class IccDataReader
     {
-        private static readonly Encoding AsciiEncoding = Encoding.GetEncoding("ASCII");
-
         /// <summary>
         /// The data that is read
         /// </summary>
@@ -28,17 +27,13 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <param name="data">The data to read</param>
         public IccDataReader(byte[] data)
         {
-            Guard.NotNull(data, nameof(data));
-            this.data = data;
+            this.data = data ?? throw new ArgumentNullException(nameof(data));
         }
 
         /// <summary>
         /// Gets the length in bytes of the raw data
         /// </summary>
-        public int DataLength
-        {
-            get { return this.data.Length; }
-        }
+        public int DataLength => this.data.Length;
 
         /// <summary>
         /// Sets the reading position to the given value

@@ -14,10 +14,9 @@ namespace SixLabors.ImageSharp.Tests
 {
     using System;
     using System.Reflection;
-
-    using SixLabors.ImageSharp.Memory;
     using SixLabors.ImageSharp.Processing;
-    using SixLabors.ImageSharp.Processing.Quantization;
+    using SixLabors.ImageSharp.Processing.Processors.Quantization;
+    using SixLabors.Memory;
 
     public class GeneralFormatTests : FileTestBase
     {
@@ -28,8 +27,8 @@ namespace SixLabors.ImageSharp.Tests
         {
             using (Image<TPixel> image = provider.GetImage())
             {
-                image.MetaData.VerticalResolution = 150;
-                image.MetaData.HorizontalResolution = 150;
+                image.Metadata.VerticalResolution = 150;
+                image.Metadata.HorizontalResolution = 150;
                 image.DebugSave(provider);
             }
         }
@@ -41,10 +40,10 @@ namespace SixLabors.ImageSharp.Tests
 
             foreach (TestFile file in Files)
             {
-                using (Image<Rgba32> image = file.CreateImage())
+                using (Image<Rgba32> image = file.CreateRgba32Image())
                 {
                     string filename = path + "/" + file.FileNameWithoutExtension + ".txt";
-                    File.WriteAllText(filename, image.ToBase64String(ImageFormats.Png));
+                    File.WriteAllText(filename, image.ToBase64String(PngFormat.Instance));
                 }
             }
         }
@@ -56,7 +55,7 @@ namespace SixLabors.ImageSharp.Tests
 
             foreach (TestFile file in Files)
             {
-                using (Image<Rgba32> image = file.CreateImage())
+                using (Image<Rgba32> image = file.CreateRgba32Image())
                 {
                     image.Save($"{path}/{file.FileName}");
                 }
@@ -67,7 +66,8 @@ namespace SixLabors.ImageSharp.Tests
             new TheoryData<string>
                 {
                     nameof(KnownQuantizers.Octree),
-                    nameof(KnownQuantizers.Palette),
+                    nameof(KnownQuantizers.WebSafe),
+                    nameof(KnownQuantizers.Werner),
                     nameof(KnownQuantizers.Wu)
                 };
 
@@ -77,52 +77,16 @@ namespace SixLabors.ImageSharp.Tests
         public void QuantizeImageShouldPreserveMaximumColorPrecision<TPixel>(TestImageProvider<TPixel> provider, string quantizerName)
             where TPixel : struct, IPixel<TPixel>
         {
-            provider.Configuration.MemoryManager = ArrayPoolMemoryManager.CreateWithModeratePooling();
+            provider.Configuration.MemoryAllocator = ArrayPoolMemoryAllocator.CreateWithModeratePooling();
 
             IQuantizer quantizer = GetQuantizer(quantizerName);
 
             using (Image<TPixel> image = provider.GetImage())
             {
-                image.Mutate(c => c.Quantize(quantizer));
-                image.DebugSave(provider, new PngEncoder() { PngColorType = PngColorType.Palette }, testOutputDetails: quantizerName);
+                image.DebugSave(provider, new PngEncoder() { ColorType = PngColorType.Palette, Quantizer = quantizer }, testOutputDetails: quantizerName);
             }
 
-            provider.Configuration.MemoryManager.ReleaseRetainedResources();
-
-            //string path = TestEnvironment.CreateOutputDirectory("Quantize");
-
-            //foreach (TestFile file in Files)
-            //{
-            //    using (Image<Rgba32> srcImage = Image.Load<Rgba32>(file.Bytes, out IImageFormat mimeType))
-            //    {
-            //        using (Image<Rgba32> image = srcImage.Clone())
-            //        {
-            //            using (FileStream output = File.OpenWrite($"{path}/Octree-{file.FileName}"))
-            //            {
-            //                image.Mutate(x => x.Quantize(KnownQuantizers.Octree));
-            //                image.Save(output, mimeType);
-            //            }
-            //        }
-
-            //        using (Image<Rgba32> image = srcImage.Clone())
-            //        {
-            //            using (FileStream output = File.OpenWrite($"{path}/Wu-{file.FileName}"))
-            //            {
-            //                image.Mutate(x => x.Quantize(KnownQuantizers.Wu));
-            //                image.Save(output, mimeType);
-            //            }
-            //        }
-
-            //        using (Image<Rgba32> image = srcImage.Clone())
-            //        {
-            //            using (FileStream output = File.OpenWrite($"{path}/Palette-{file.FileName}"))
-            //            {
-            //                image.Mutate(x => x.Quantize(KnownQuantizers.Palette));
-            //                image.Save(output, mimeType);
-            //            }
-            //        }
-            //    }
-            //}
+            provider.Configuration.MemoryAllocator.ReleaseRetainedResources();
         }
 
         private static IQuantizer GetQuantizer(string name)
@@ -138,7 +102,7 @@ namespace SixLabors.ImageSharp.Tests
 
             foreach (TestFile file in Files)
             {
-                using (Image<Rgba32> image = file.CreateImage())
+                using (Image<Rgba32> image = file.CreateRgba32Image())
                 {
                     using (FileStream output = File.OpenWrite($"{path}/{file.FileNameWithoutExtension}.bmp"))
                     {
@@ -171,15 +135,15 @@ namespace SixLabors.ImageSharp.Tests
             foreach (TestFile file in Files)
             {
                 byte[] serialized;
-                using (Image<Rgba32> image = Image.Load(file.Bytes, out IImageFormat mimeType))
-                using (MemoryStream memoryStream = new MemoryStream())
+                using (var image = Image.Load(file.Bytes, out IImageFormat mimeType))
+                using (var memoryStream = new MemoryStream())
                 {
                     image.Save(memoryStream, mimeType);
                     memoryStream.Flush();
                     serialized = memoryStream.ToArray();
                 }
 
-                using (Image<Rgba32> image2 = Image.Load<Rgba32>(serialized))
+                using (var image2 = Image.Load<Rgba32>(serialized))
                 {
                     image2.Save($"{path}/{file.FileName}");
                 }
@@ -205,14 +169,14 @@ namespace SixLabors.ImageSharp.Tests
         [InlineData(10, 100, "jpg")]
         public void CanIdentifyImageLoadedFromBytes(int width, int height, string format)
         {
-            using (Image<Rgba32> image = Image.LoadPixelData(new Rgba32[width * height], width, height))
+            using (var image = Image.LoadPixelData(new Rgba32[width * height], width, height))
             {
                 using (var memoryStream = new MemoryStream())
                 {
                     image.Save(memoryStream, GetEncoder(format));
                     memoryStream.Position = 0;
 
-                    var imageInfo = Image.Identify(memoryStream);
+                    IImageInfo imageInfo = Image.Identify(memoryStream);
 
                     Assert.Equal(imageInfo.Width, width);
                     Assert.Equal(imageInfo.Height, height);

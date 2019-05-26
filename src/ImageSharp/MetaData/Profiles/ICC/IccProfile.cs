@@ -2,28 +2,24 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Collections.Generic;
-
-#if !NETSTANDARD1_1
 using System.Security.Cryptography;
-#endif
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Represents an ICC profile
     /// </summary>
-    public sealed class IccProfile
+    public sealed class IccProfile : IDeepCloneable<IccProfile>
     {
         /// <summary>
         /// The byte array to read the ICC profile from
         /// </summary>
-        private byte[] data;
+        private readonly byte[] data;
 
         /// <summary>
         /// The backing file for the <see cref="Entries"/> property
         /// </summary>
-        private List<IccTagDataEntry> entries;
+        private IccTagDataEntry[] entries;
 
         /// <summary>
         /// ICC profile header
@@ -42,9 +38,17 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// Initializes a new instance of the <see cref="IccProfile"/> class.
         /// </summary>
         /// <param name="data">The raw ICC profile data</param>
-        public IccProfile(byte[] data)
+        public IccProfile(byte[] data) => this.data = data;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="IccProfile"/> class.
+        /// </summary>
+        /// <param name="header">The profile header</param>
+        /// <param name="entries">The actual profile data</param>
+        internal IccProfile(IccProfileHeader header, IccTagDataEntry[] entries)
         {
-            this.data = data;
+            this.header = header ?? throw new ArgumentNullException(nameof(header));
+            this.entries = entries ?? throw new ArgumentNullException(nameof(entries));
         }
 
         /// <summary>
@@ -53,25 +57,11 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// </summary>
         /// <param name="other">The other ICC profile, where the clone should be made from.</param>
         /// <exception cref="ArgumentNullException"><paramref name="other"/> is null.</exception>>
-        public IccProfile(IccProfile other)
+        private IccProfile(IccProfile other)
         {
             Guard.NotNull(other, nameof(other));
 
             this.data = other.ToByteArray();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="IccProfile"/> class.
-        /// </summary>
-        /// <param name="header">The profile header</param>
-        /// <param name="entries">The actual profile data</param>
-        internal IccProfile(IccProfileHeader header, IEnumerable<IccTagDataEntry> entries)
-        {
-            Guard.NotNull(header, nameof(header));
-            Guard.NotNull(entries, nameof(entries));
-
-            this.header = header;
-            this.entries = new List<IccTagDataEntry>(entries);
         }
 
         /// <summary>
@@ -91,7 +81,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <summary>
         /// Gets the actual profile data
         /// </summary>
-        public List<IccTagDataEntry> Entries
+        public IccTagDataEntry[] Entries
         {
             get
             {
@@ -100,7 +90,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
             }
         }
 
-#if !NETSTANDARD1_1
+        /// <inheritdoc/>
+        public IccProfile DeepClone() => new IccProfile(this);
 
         /// <summary>
         /// Calculates the MD5 hash value of an ICC profile
@@ -147,19 +138,6 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
             }
         }
 
-#endif
-
-        /// <summary>
-        /// Extends the profile with additional data.
-        /// </summary>
-        /// <param name="bytes">The array containing addition profile data.</param>
-        public void Extend(byte[] bytes)
-        {
-            int currentLength = this.data.Length;
-            Array.Resize(ref this.data, currentLength + bytes.Length);
-            Buffer.BlockCopy(bytes, 0, this.data, currentLength, bytes.Length);
-        }
-
         /// <summary>
         /// Checks for signs of a corrupt profile.
         /// </summary>
@@ -167,11 +145,22 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <returns>True if the profile is valid; False otherwise</returns>
         public bool CheckIsValid()
         {
-            return Enum.IsDefined(typeof(IccColorSpaceType), this.Header.DataColorSpace) &&
+            const int minSize = 128;
+            const int maxSize = 50_000_000; // it's unlikely there is a profile bigger than 50MB
+
+            bool arrayValid = true;
+            if (this.data != null)
+            {
+                arrayValid = this.data.Length >= minSize &&
+                             this.data.Length >= this.Header.Size;
+            }
+
+            return arrayValid &&
+                   Enum.IsDefined(typeof(IccColorSpaceType), this.Header.DataColorSpace) &&
                    Enum.IsDefined(typeof(IccColorSpaceType), this.Header.ProfileConnectionSpace) &&
                    Enum.IsDefined(typeof(IccRenderingIntent), this.Header.RenderingIntent) &&
-                   this.Header.Size >= 128 &&
-                   this.Header.Size < 50_000_000; // it's unlikely there is a profile bigger than 50MB
+                   this.Header.Size >= minSize &&
+                   this.Header.Size < maxSize;
         }
 
         /// <summary>
@@ -200,7 +189,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return;
             }
 
-            if (this.data == null)
+            if (this.data is null)
             {
                 this.header = new IccProfileHeader();
                 return;
@@ -217,14 +206,14 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return;
             }
 
-            if (this.data == null)
+            if (this.data is null)
             {
-                this.entries = new List<IccTagDataEntry>();
+                this.entries = Array.Empty<IccTagDataEntry>();
                 return;
             }
 
             var reader = new IccReader();
-            this.entries = new List<IccTagDataEntry>(reader.ReadTagData(this.data));
+            this.entries = reader.ReadTagData(this.data);
         }
     }
 }

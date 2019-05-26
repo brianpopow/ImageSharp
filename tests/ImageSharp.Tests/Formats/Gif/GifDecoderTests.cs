@@ -1,51 +1,62 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
-using System.Text;
-using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.Primitives;
-using Xunit;
+using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Metadata;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Tests.TestUtilities.ImageComparison;
+using Xunit;
 
 // ReSharper disable InconsistentNaming
 namespace SixLabors.ImageSharp.Tests.Formats.Gif
 {
-    using System.Collections.Generic;
-
-    using SixLabors.ImageSharp.Tests.TestUtilities.ImageComparison;
-
     public class GifDecoderTests
     {
         private const PixelTypes TestPixelTypes = PixelTypes.Rgba32 | PixelTypes.RgbaVector | PixelTypes.Argb32;
 
         public static readonly string[] MultiFrameTestFiles =
-            {
-                TestImages.Gif.Giphy, TestImages.Gif.Kumin
-            };
+        {
+            TestImages.Gif.Giphy, TestImages.Gif.Kumin
+        };
 
         public static readonly string[] BasicVerificationFiles =
-            {
-                TestImages.Gif.Cheers,
-                TestImages.Gif.Rings,
+        {
+            TestImages.Gif.Cheers,
+            TestImages.Gif.Rings,
 
-                // previously DecodeBadApplicationExtensionLength:
-                TestImages.Gif.Issues.BadAppExtLength,
-                TestImages.Gif.Issues.BadAppExtLength_2,
+            // previously DecodeBadApplicationExtensionLength:
+            TestImages.Gif.Issues.BadAppExtLength,
+            TestImages.Gif.Issues.BadAppExtLength_2,
 
-                // previously DecodeBadDescriptorDimensionsLength:
-                TestImages.Gif.Issues.BadDescriptorWidth
-            };
+            // previously DecodeBadDescriptorDimensionsLength:
+            TestImages.Gif.Issues.BadDescriptorWidth
+        };
+
+        public static readonly TheoryData<string, int, int, PixelResolutionUnit> RatioFiles =
+        new TheoryData<string, int, int, PixelResolutionUnit>
+        {
+            { TestImages.Gif.Rings, (int)ImageMetadata.DefaultHorizontalResolution, (int)ImageMetadata.DefaultVerticalResolution , PixelResolutionUnit.PixelsPerInch},
+            { TestImages.Gif.Ratio1x4, 1, 4 , PixelResolutionUnit.AspectRatio},
+            { TestImages.Gif.Ratio4x1, 4, 1, PixelResolutionUnit.AspectRatio }
+        };
 
         private static readonly Dictionary<string, int> BasicVerificationFrameCount =
-            new Dictionary<string, int>
-                {
-                    [TestImages.Gif.Cheers] = 93,
-                    [TestImages.Gif.Issues.BadDescriptorWidth] = 36,
-            };
+        new Dictionary<string, int>
+        {
+            [TestImages.Gif.Cheers] = 93,
+            [TestImages.Gif.Issues.BadDescriptorWidth] = 36,
+        };
 
-        public static readonly string[] BadAppExtFiles = { TestImages.Gif.Issues.BadAppExtLength, TestImages.Gif.Issues.BadAppExtLength_2 };
+        public static readonly string[] BadAppExtFiles =
+        {
+            TestImages.Gif.Issues.BadAppExtLength,
+            TestImages.Gif.Issues.BadAppExtLength_2
+        };
 
         [Theory]
         [WithFileCollection(nameof(MultiFrameTestFiles), PixelTypes.Rgba32)]
@@ -56,6 +67,61 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
             {
                 image.DebugSaveMultiFrame(provider);
                 image.CompareToReferenceOutputMultiFrame(provider, ImageComparer.Exact);
+            }
+        }
+
+        [Fact]
+        public unsafe void Decode_NonTerminatedFinalFrame()
+        {
+            var testFile = TestFile.Create(TestImages.Gif.Rings);
+
+            int length = testFile.Bytes.Length - 2;
+
+            fixed (byte* data = testFile.Bytes.AsSpan(0, length))
+            {
+                using (var stream = new UnmanagedMemoryStream(data, length))
+                {
+                    var decoder = new GifDecoder();
+
+                    using (Image<Rgba32> image = decoder.Decode<Rgba32>(Configuration.Default, stream))
+                    {
+                        Assert.Equal((200, 200), (image.Width, image.Height));
+                    }
+                }
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(RatioFiles))]
+        public void Decode_VerifyRatio(string imagePath, int xResolution, int yResolution, PixelResolutionUnit resolutionUnit)
+        {
+            var testFile = TestFile.Create(imagePath);
+            using (var stream = new MemoryStream(testFile.Bytes, false))
+            {
+                var decoder = new GifDecoder();
+                using (Image<Rgba32> image = decoder.Decode<Rgba32>(Configuration.Default, stream))
+                {
+                    ImageMetadata meta = image.Metadata;
+                    Assert.Equal(xResolution, meta.HorizontalResolution);
+                    Assert.Equal(yResolution, meta.VerticalResolution);
+                    Assert.Equal(resolutionUnit, meta.ResolutionUnits);
+                }
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(RatioFiles))]
+        public void Identify_VerifyRatio(string imagePath, int xResolution, int yResolution, PixelResolutionUnit resolutionUnit)
+        {
+            var testFile = TestFile.Create(imagePath);
+            using (var stream = new MemoryStream(testFile.Bytes, false))
+            {
+                var decoder = new GifDecoder();
+                IImageInfo image = decoder.Identify(Configuration.Default, stream);
+                ImageMetadata meta = image.Metadata;
+                Assert.Equal(xResolution, meta.HorizontalResolution);
+                Assert.Equal(yResolution, meta.VerticalResolution);
+                Assert.Equal(resolutionUnit, meta.ResolutionUnits);
             }
         }
 
@@ -88,7 +154,7 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
                 image.CompareFirstFrameToReferenceOutput(ImageComparer.Exact, provider);
             }
         }
-        
+
         [Fact]
         public void Decode_IgnoreMetadataIsFalse_CommentsAreRead()
         {
@@ -99,11 +165,11 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
 
             var testFile = TestFile.Create(TestImages.Gif.Rings);
 
-            using (Image<Rgba32> image = testFile.CreateImage(options))
+            using (Image<Rgba32> image = testFile.CreateRgba32Image(options))
             {
-                Assert.Equal(1, image.MetaData.Properties.Count);
-                Assert.Equal("Comments", image.MetaData.Properties[0].Name);
-                Assert.Equal("ImageSharp", image.MetaData.Properties[0].Value);
+                Assert.Equal(1, image.Metadata.Properties.Count);
+                Assert.Equal("Comments", image.Metadata.Properties[0].Name);
+                Assert.Equal("ImageSharp", image.Metadata.Properties[0].Value);
             }
         }
 
@@ -117,9 +183,9 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
 
             var testFile = TestFile.Create(TestImages.Gif.Rings);
 
-            using (Image<Rgba32> image = testFile.CreateImage(options))
+            using (Image<Rgba32> image = testFile.CreateRgba32Image(options))
             {
-                Assert.Equal(0, image.MetaData.Properties.Count);
+                Assert.Equal(0, image.Metadata.Properties.Count);
             }
         }
 
@@ -133,10 +199,10 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
 
             var testFile = TestFile.Create(TestImages.Gif.Rings);
 
-            using (Image<Rgba32> image = testFile.CreateImage(options))
+            using (Image<Rgba32> image = testFile.CreateRgba32Image(options))
             {
-                Assert.Equal(1, image.MetaData.Properties.Count);
-                Assert.Equal("浉条卥慨灲", image.MetaData.Properties[0].Value);
+                Assert.Equal(1, image.Metadata.Properties.Count);
+                Assert.Equal("浉条卥慨灲", image.Metadata.Properties[0].Value);
             }
         }
 
@@ -169,7 +235,7 @@ namespace SixLabors.ImageSharp.Tests.Formats.Gif
         [InlineData(TestImages.Gif.Trans, 8)]
         public void DetectPixelSize(string imagePath, int expectedPixelSize)
         {
-            TestFile testFile = TestFile.Create(imagePath);
+            var testFile = TestFile.Create(imagePath);
             using (var stream = new MemoryStream(testFile.Bytes, false))
             {
                 Assert.Equal(expectedPixelSize, Image.Identify(stream)?.PixelType?.BitsPerPixel);

@@ -4,9 +4,8 @@
 using System.Numerics;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Primitives;
-using SixLabors.ImageSharp.Processing.Drawing;
-using SixLabors.ImageSharp.Processing.Drawing.Brushes;
-using SixLabors.ImageSharp.Processing.Drawing.Processors;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Drawing;
 using SixLabors.Shapes;
 using Xunit;
 
@@ -15,8 +14,8 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
     public class FillPathCollection : BaseImageOperationsExtensionTest
     {
         GraphicsOptions noneDefault = new GraphicsOptions();
-        Rgba32 color = Rgba32.HotPink;
-        SolidBrush<Rgba32> brush = Brushes.Solid(Rgba32.HotPink);
+        Color color = Color.HotPink;
+        SolidBrush brush = Brushes.Solid(Rgba32.HotPink);
         IPath path1 = new Path(new LinearLineSegment(new SixLabors.Primitives.PointF[] {
                     new Vector2(10,10),
                     new Vector2(20,10),
@@ -44,7 +43,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
 
             for (int i = 0; i < 2; i++)
             {
-                FillRegionProcessor<Rgba32> processor = this.Verify<FillRegionProcessor<Rgba32>>(i);
+                FillRegionProcessor processor = this.Verify<FillRegionProcessor>(i);
 
                 Assert.Equal(GraphicsOptions.Default, processor.Options);
 
@@ -65,7 +64,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
 
             for (int i = 0; i < 2; i++)
             {
-                FillRegionProcessor<Rgba32> processor = this.Verify<FillRegionProcessor<Rgba32>>(i);
+                FillRegionProcessor processor = this.Verify<FillRegionProcessor>(i);
 
                 Assert.Equal(this.noneDefault, processor.Options);
 
@@ -84,7 +83,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
 
             for (int i = 0; i < 2; i++)
             {
-                FillRegionProcessor<Rgba32> processor = this.Verify<FillRegionProcessor<Rgba32>>(i);
+                FillRegionProcessor processor = this.Verify<FillRegionProcessor>(i);
 
                 Assert.Equal(GraphicsOptions.Default, processor.Options);
 
@@ -92,7 +91,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
                 Polygon polygon = Assert.IsType<Polygon>(region.Shape);
                 LinearLineSegment segments = Assert.IsType<LinearLineSegment>(polygon.LineSegments[0]);
 
-                SolidBrush<Rgba32> brush = Assert.IsType<SolidBrush<Rgba32>>(processor.Brush);
+                SolidBrush brush = Assert.IsType<SolidBrush>(processor.Brush);
                 Assert.Equal(this.color, brush.Color);
             }
         }
@@ -104,7 +103,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
 
             for (int i = 0; i < 2; i++)
             {
-                FillRegionProcessor<Rgba32> processor = this.Verify<FillRegionProcessor<Rgba32>>(i);
+                FillRegionProcessor processor = this.Verify<FillRegionProcessor>(i);
 
                 Assert.Equal(this.noneDefault, processor.Options);
 
@@ -112,7 +111,7 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Paths
                 Polygon polygon = Assert.IsType<Polygon>(region.Shape);
                 LinearLineSegment segments = Assert.IsType<LinearLineSegment>(polygon.LineSegments[0]);
 
-                SolidBrush<Rgba32> brush = Assert.IsType<SolidBrush<Rgba32>>(processor.Brush);
+                SolidBrush brush = Assert.IsType<SolidBrush>(processor.Brush);
                 Assert.Equal(this.color, brush.Color);
             }
         }

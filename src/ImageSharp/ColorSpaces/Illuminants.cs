@@ -8,13 +8,11 @@ namespace SixLabors.ImageSharp.ColorSpaces
     /// Standard illuminants provide a basis for comparing images or colors recorded under different lighting
     /// </summary>
     /// <remarks>
-    /// Coefficients taken from:
-    /// http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
+    /// Coefficients taken from: http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
     /// <br />
-    /// Descriptions taken from:
-    /// http://en.wikipedia.org/wiki/Standard_illuminant
+    /// Descriptions taken from: http://en.wikipedia.org/wiki/Standard_illuminant
     /// </remarks>
-    internal static class Illuminants
+    public static class Illuminants
     {
         /// <summary>
         /// Incandescent / Tungsten

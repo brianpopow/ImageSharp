@@ -3,8 +3,8 @@
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing.Processors;
-using SixLabors.ImageSharp.Processing.Transforms;
-using SixLabors.ImageSharp.Processing.Transforms.Processors;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
 using Xunit;
 
@@ -16,7 +16,7 @@ namespace SixLabors.ImageSharp.Tests.Processing.Transforms
         public void SkewXYCreateSkewProcessorWithAnglesSet()
         {
             this.operations.Skew(10, 20);
-            SkewProcessor<Rgba32> processor = this.Verify<SkewProcessor<Rgba32>>();
+            SkewProcessor processor = this.Verify<SkewProcessor>();
 
             Assert.Equal(10, processor.DegreesX);
             Assert.Equal(20, processor.DegreesY);

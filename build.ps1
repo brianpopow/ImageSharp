@@ -8,7 +8,7 @@ $tagRegex = '^v?(\d+\.\d+\.\d+)(-([a-zA-Z]+)\.?(\d*))?$'
 # we are running on the build server 
 $isVersionTag = $env:APPVEYOR_REPO_TAG_NAME -match $tagRegex
 
- if($isVersionTag){
+ if($isVersionTag) {
      
     Write-Debug "Building commit tagged with a compatable version number"
     
@@ -26,7 +26,8 @@ $isVersionTag = $env:APPVEYOR_REPO_TAG_NAME -match $tagRegex
 
         $version = "${version}${padded}"
      }
- }else {
+ }
+ else {
      
     Write-Debug "Untagged"
     $lastTag =  (git tag --list  --sort=-taggerdate)  | Out-String
@@ -93,7 +94,7 @@ if("$env:APPVEYOR_API_URL" -ne ""){
 }
 
 Write-Host "Building version '${version}'"
-dotnet restore /p:packageversion=$version
+dotnet restore /p:packageversion=$version /p:DisableImplicitNuGetFallbackFolder=true
 
 Write-Host "Building projects"
 dotnet build -c Release /p:packageversion=$version

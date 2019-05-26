@@ -3,9 +3,10 @@
 
 using System;
 using System.Buffers.Binary;
+using System.Runtime.CompilerServices;
 using System.Text;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Provides methods to read ICC data types
@@ -70,22 +71,22 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// Reads a float.
         /// </summary>
         /// <returns>the value</returns>
-        public unsafe float ReadSingle()
+        public float ReadSingle()
         {
             int intValue = this.ReadInt32();
 
-            return *((float*)&intValue);
+            return Unsafe.As<int, float>(ref intValue);
         }
 
         /// <summary>
         /// Reads a double
         /// </summary>
         /// <returns>the value</returns>
-        public unsafe double ReadDouble()
+        public double ReadDouble()
         {
             long intValue = this.ReadInt64();
 
-            return *((double*)&intValue);
+            return Unsafe.As<long, double>(ref intValue);
         }
 
         /// <summary>
@@ -101,7 +102,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
             }
 
             Guard.MustBeGreaterThan(length, 0, nameof(length));
-            string value = AsciiEncoding.GetString(this.data, this.AddIndex(length), length);
+            string value = Encoding.ASCII.GetString(this.data, this.AddIndex(length), length);
 
             // remove data after (potential) null terminator
             int pos = value.IndexOf('\0');

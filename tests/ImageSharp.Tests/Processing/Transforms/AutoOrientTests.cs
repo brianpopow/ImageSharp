@@ -7,8 +7,8 @@ using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Processing.Transforms
 {
-    using SixLabors.ImageSharp.Processing.Transforms;
-    using SixLabors.ImageSharp.Processing.Transforms.Processors;
+    using SixLabors.ImageSharp.Processing;
+    using SixLabors.ImageSharp.Processing.Processors.Transforms;
 
     public class AutoOrientTests : BaseImageOperationsExtensionTest
     {
@@ -16,7 +16,7 @@ namespace SixLabors.ImageSharp.Tests.Processing.Transforms
         public void AutoOrient_AutoOrientProcessor()
         {
             this.operations.AutoOrient();
-            this.Verify<AutoOrientProcessor<Rgba32>>();
+            this.Verify<AutoOrientProcessor>();
         }
     }
 }

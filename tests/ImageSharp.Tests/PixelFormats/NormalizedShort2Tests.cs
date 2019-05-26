@@ -55,7 +55,7 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
         }
 
         [Fact]
-        public void NormalizedShort2_PackFromScaledVector4()
+        public void NormalizedShort2_FromScaledVector4()
         {
             // arrange
             Vector4 scaled = new NormalizedShort2(-Vector2.One).ToScaledVector4();
@@ -63,7 +63,7 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
             uint expected = 0x80018001;
 
             // act
-            short2.PackFromScaledVector4(scaled);
+            short2.FromScaledVector4(scaled);
             uint actual = short2.PackedValue;
 
             // assert
@@ -71,95 +71,17 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
         }
 
         [Fact]
-        public void NormalizedShort2_PackFromRgba32_ToRgb24()
+        public void NormalizedShort2_FromBgra5551()
         {
             // arrange
-            var actual = default(Rgb24);
-            var short2 = new NormalizedShort2();
-            var rgba = new Rgba32(141, 90, 0, 0);
-            var expected = new Rgb24(141, 90, 0);
+            var normalizedShort2 = default(NormalizedShort2);
+            var expected = new Vector4(1, 1, 0, 1);
 
             // act
-            short2.PackFromRgba32(rgba);
-            short2.ToRgb24(ref actual);
+            normalizedShort2.FromBgra5551(new Bgra5551(1.0f, 1.0f, 1.0f, 1.0f));
 
             // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedShort2_ToRgb24()
-        {
-            // arrange
-            var short2 = new NormalizedShort2(0.1f, -0.3f);
-            var actual = default(Rgb24);
-            var expected = new Rgb24(141, 90, 0);
-
-            // act
-            short2.ToRgb24(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedShort2_ToRgba32()
-        {
-            // arrange
-            var short2 = new NormalizedShort2(0.1f, -0.3f);
-            var actual = default(Rgba32);
-            var expected = new Rgba32(141, 90, 0, 255);
-
-            // act
-            short2.ToRgba32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedShort2_ToBgr24()
-        {
-            // arrange
-            var short2 = new NormalizedShort2(0.1f, -0.3f);
-            var actual = default(Bgr24);
-            var expected = new Bgr24(141, 90, 0);
-
-            // act
-            short2.ToBgr24(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedShort2_ToBgra32()
-        {
-            // arrange
-            var short2 = new NormalizedShort2(0.1f, -0.3f);
-            var actual = default(Bgra32);
-            var expected = new Bgra32(141, 90, 0, 255);
-
-            // act
-            short2.ToBgra32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedShort2_ToArgb32()
-        {
-            // arrange
-            var short2 = new NormalizedShort2(0.1f, -0.3f);
-            var actual = default(Argb32);
-            var expected = new Argb32(141, 90, 0, 255);
-
-            // act
-            short2.ToArgb32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
+            Assert.Equal(expected, normalizedShort2.ToVector4());
         }
     }
 }

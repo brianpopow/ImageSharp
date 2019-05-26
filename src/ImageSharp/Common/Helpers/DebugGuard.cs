@@ -17,13 +17,14 @@ namespace SixLabors.ImageSharp
         /// Verifies, that the method parameter with specified object value is not null
         /// and throws an exception if it is found to be so.
         /// </summary>
-        /// <param name="target">The target object, which cannot be null.</param>
+        /// <param name="value">The target object, which cannot be null.</param>
         /// <param name="parameterName">The name of the parameter that is to be checked.</param>
-        /// <exception cref="ArgumentNullException"><paramref name="target"/> is null</exception>
+        /// <exception cref="ArgumentNullException"><paramref name="value"/> is null</exception>
         [Conditional("DEBUG")]
-        public static void NotNull(object target, string parameterName)
+        public static void NotNull<T>(T value, string parameterName)
+            where T : class
         {
-            if (target == null)
+            if (value is null)
             {
                 throw new ArgumentNullException(parameterName);
             }
@@ -159,6 +160,20 @@ namespace SixLabors.ImageSharp
             if (!target)
             {
                 throw new ArgumentException(message, parameterName);
+            }
+        }
+
+        /// <summary>
+        /// Verifies whether a specific condition is met, throwing an exception if it's false.
+        /// </summary>
+        /// <param name="target">The condition</param>
+        /// <param name="message">The error message</param>
+        [Conditional("DEBUG")]
+        public static void IsTrue(bool target, string message)
+        {
+            if (!target)
+            {
+                throw new InvalidOperationException(message);
             }
         }
 

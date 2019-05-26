@@ -4,10 +4,10 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-
 using SixLabors.ImageSharp.Advanced;
 using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.Memory;
 
 // ReSharper disable InconsistentNaming
 namespace SixLabors.ImageSharp.Formats.Jpeg.Components
@@ -44,7 +44,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components
 
         /// <summary>
         /// FOR TESTING ONLY!
-        /// Gets or sets a value in a row+coulumn of the 8x8 block
+        /// Gets or sets a value in a row+column of the 8x8 block
         /// </summary>
         /// <param name="x">The x position index in the row</param>
         /// <param name="y">The column index</param>
@@ -58,13 +58,14 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components
         public void LoadAndStretchEdges<TPixel>(IPixelSource<TPixel> source, int sourceX, int sourceY)
             where TPixel : struct, IPixel<TPixel>
         {
-            var buffer = source.PixelBuffer as Buffer2D<T>;
-            if (buffer == null)
+            if (source.PixelBuffer is Buffer2D<T> buffer)
+            {
+                this.LoadAndStretchEdges(buffer, sourceX, sourceY);
+            }
+            else
             {
                 throw new InvalidOperationException("LoadAndStretchEdges<TPixels>() is only valid for TPixel == T !");
             }
-
-            this.LoadAndStretchEdges(buffer, sourceX, sourceY);
         }
 
         /// <summary>

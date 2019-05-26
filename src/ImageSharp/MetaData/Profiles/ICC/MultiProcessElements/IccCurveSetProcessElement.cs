@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// A set of curves to process data
@@ -18,8 +18,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccCurveSetProcessElement(IccOneDimensionalCurve[] curves)
             : base(IccMultiProcessElementSignature.CurveSet, curves?.Length ?? 1, curves?.Length ?? 1)
         {
-            Guard.NotNull(curves, nameof(curves));
-            this.Curves = curves;
+            this.Curves = curves ?? throw new ArgumentNullException(nameof(curves));
         }
 
         /// <summary>

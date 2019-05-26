@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This tag structure contains a set of records each referencing
@@ -29,8 +29,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccMultiLocalizedUnicodeTagDataEntry(IccLocalizedString[] texts, IccProfileTag tagSignature)
             : base(IccTypeSignature.MultiLocalizedUnicode, tagSignature)
         {
-            Guard.NotNull(texts, nameof(texts));
-            this.Texts = texts;
+            this.Texts = texts ?? throw new ArgumentNullException(nameof(texts));
         }
 
         /// <summary>
@@ -47,7 +46,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccMultiLocalizedUnicodeTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -63,26 +62,10 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
-            return obj is IccMultiLocalizedUnicodeTagDataEntry && this.Equals((IccMultiLocalizedUnicodeTagDataEntry)obj);
+            return obj is IccMultiLocalizedUnicodeTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc />
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.Texts?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.Texts);
     }
 }

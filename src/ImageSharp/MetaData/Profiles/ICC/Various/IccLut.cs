@@ -2,9 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Lookup Table
@@ -17,8 +16,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <param name="values">The LUT values</param>
         public IccLut(float[] values)
         {
-            Guard.NotNull(values, nameof(values));
-            this.Values = values;
+            this.Values = values ?? throw new ArgumentNullException(nameof(values));
         }
 
         /// <summary>
@@ -68,7 +66,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return true;
             }
 
-            return this.Values.SequenceEqual(other.Values);
+            return this.Values.AsSpan().SequenceEqual(other.Values);
         }
     }
 }

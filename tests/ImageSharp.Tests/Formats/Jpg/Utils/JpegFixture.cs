@@ -10,8 +10,6 @@ using System.Text;
 
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Formats.Jpeg.Components;
-using SixLabors.ImageSharp.Formats.Jpeg.GolangPort;
-using SixLabors.ImageSharp.Formats.Jpeg.PdfJsPort;
 
 using Xunit;
 using Xunit.Abstractions;
@@ -60,7 +58,12 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg.Utils
             {
                 for (int j = 0; j < 8; j++)
                 {
-                    result[i * 8 + j] = (short)(i * 10 + j);
+                    short val = (short)(i * 10 + j);
+                    if ((i + j) % 2 == 0)
+                    {
+                        val *= -1;
+                    }
+                    result[i * 8 + j] = val;
                 }
             }
             return result;
@@ -175,23 +178,12 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg.Utils
             Assert.False(failed);
         }
 
-        internal static GolangJpegDecoderCore ParseGolangStream(string testFileName, bool metaDataOnly = false)
+        internal static JpegDecoderCore ParseJpegStream(string testFileName, bool metaDataOnly = false)
         {
             byte[] bytes = TestFile.Create(testFileName).Bytes;
             using (var ms = new MemoryStream(bytes))
             {
-                var decoder = new GolangJpegDecoderCore(Configuration.Default, new JpegDecoder());
-                decoder.ParseStream(ms, metaDataOnly);
-                return decoder;
-            }
-        }
-
-        internal static PdfJsJpegDecoderCore ParsePdfJsStream(string testFileName, bool metaDataOnly = false)
-        {
-            byte[] bytes = TestFile.Create(testFileName).Bytes;
-            using (var ms = new MemoryStream(bytes))
-            {
-                var decoder = new PdfJsJpegDecoderCore(Configuration.Default, new JpegDecoder());
+                var decoder = new JpegDecoderCore(Configuration.Default, new JpegDecoder());
                 decoder.ParseStream(ms, metaDataOnly);
                 return decoder;
             }

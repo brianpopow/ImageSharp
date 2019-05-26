@@ -4,7 +4,7 @@
 using System;
 using System.Numerics;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This type represents a set of viewing condition parameters.
@@ -61,7 +61,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccViewingConditionsTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -80,30 +80,17 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
-            return obj is IccViewingConditionsTagDataEntry && this.Equals((IccViewingConditionsTagDataEntry)obj);
+            return obj is IccViewingConditionsTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.IlluminantXyz.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.SurroundXyz.GetHashCode();
-                hashCode = (hashCode * 397) ^ (int)this.Illuminant;
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Signature,
+                this.IlluminantXyz,
+                this.SurroundXyz,
+                this.Illuminant);
         }
     }
 }

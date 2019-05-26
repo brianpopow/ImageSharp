@@ -1,6 +1,7 @@
 // Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
+using System;
 using System.Numerics;
 using SixLabors.ImageSharp.PixelFormats;
 using Xunit;
@@ -9,10 +10,34 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
 {
     public class Bgra32Tests
     {
+        /// <summary>
+        /// Tests the equality operators for equality.
+        /// </summary>
+        [Fact]
+        public void AreEqual()
+        {
+            var color1 = new Bgra32(byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue);
+            var color2 = new Bgra32(byte.MaxValue, byte.MaxValue, byte.MaxValue);
+            
+            Assert.Equal(color1, color2);
+        }
+
+        /// <summary>
+        /// Tests the equality operators for inequality.
+        /// </summary>
+        [Fact]
+        public void AreNotEqual()
+        {
+            var color1 = new Bgra32(0, 0, byte.MaxValue, byte.MaxValue);
+            var color2 = new Bgra32(byte.MaxValue, byte.MaxValue, byte.MaxValue);
+
+            Assert.NotEqual(color1, color2);
+        }
+
         public static readonly TheoryData<byte, byte, byte, byte> ColorData =
             new TheoryData<byte, byte, byte, byte>()
                 {
-                    { 1, 2, 3, 4 }, { 4, 5, 6, 7 }, { 0, 255, 42, 0 }, { 1, 2, 3, 255 } 
+                    { 1, 2, 3, 4 }, { 4, 5, 6, 7 }, { 0, 255, 42, 0 }, { 1, 2, 3, 255 }
                 };
 
         [Theory]
@@ -67,10 +92,10 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
 
 
         [Fact]
-        public void PackFromRgba32()
+        public void FromRgba32()
         {
             var rgb = default(Rgb24);
-            rgb.PackFromRgba32(new Rgba32(1, 2, 3, 4));
+            rgb.FromRgba32(new Rgba32(1, 2, 3, 4));
 
             Assert.Equal(1, rgb.R);
             Assert.Equal(2, rgb.G);
@@ -84,10 +109,10 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
             a / 255f);
 
         [Fact]
-        public void PackFromVector4()
+        public void FromVector4()
         {
             var c = default(Bgra32);
-            c.PackFromVector4(Vec(1, 2, 3, 4));
+            c.FromVector4(Vec(1, 2, 3, 4));
 
             Assert.Equal(1, c.R);
             Assert.Equal(2, c.G);
@@ -104,47 +129,17 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
         }
 
         [Fact]
-        public void ToRgb24()
+        public void Bgra32_FromBgra5551()
         {
-            var c = new Bgra32(1, 2, 3, 4);
-            var dest = default(Rgb24);
-
-            c.ToRgb24(ref dest);
-
-            Assert.Equal(new Rgb24(1, 2, 3), dest);
-        }
-
-        [Fact]
-        public void ToRgba32()
-        {
-            var c = new Bgra32(1, 2, 3, 4);
-            var rgba = default(Rgba32);
-
-            c.ToRgba32(ref rgba);
-
-            Assert.Equal(new Rgba32(1, 2, 3, 4), rgba);
-        }
-
-        [Fact]
-        public void ToBgr24()
-        {
-            var rgb = new Bgra32(1, 2, 3, 4);
-            var bgr = default(Bgr24);
-
-            rgb.ToBgr24(ref bgr);
-
-            Assert.Equal(new Bgr24(1, 2, 3), bgr);
-        }
-
-        [Fact]
-        public void ToBgra32()
-        {
-            var rgb = new Bgra32(1, 2, 3, 4);
+            // arrange
             var bgra = default(Bgra32);
+            uint expected = uint.MaxValue;
 
-            rgb.ToBgra32(ref bgra);
+            // act
+            bgra.FromBgra5551(new Bgra5551(1.0f, 1.0f, 1.0f, 1.0f));
 
-            Assert.Equal(new Bgra32(1, 2, 3, 4), bgra);
+            // assert
+            Assert.Equal(expected, bgra.PackedValue);
         }
     }
 }

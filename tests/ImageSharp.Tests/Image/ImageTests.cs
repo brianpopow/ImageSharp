@@ -1,19 +1,20 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
-using System;
 using SixLabors.ImageSharp.Advanced;
-using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Metadata;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Tests.Memory;
+
 using Xunit;
+// ReSharper disable InconsistentNaming
 
 namespace SixLabors.ImageSharp.Tests
 {
     /// <summary>
     /// Tests the <see cref="Image"/> class.
     /// </summary>
-    public class ImageTests
+    public partial class ImageTests
     {
         public class Constructor
         {
@@ -34,7 +35,7 @@ namespace SixLabors.ImageSharp.Tests
             [Fact]
             public void Configuration_Width_Height()
             {
-                Configuration configuration = Configuration.Default.ShallowCopy();
+                Configuration configuration = Configuration.Default.Clone();
 
                 using (var image = new Image<Rgba32>(configuration, 11, 23))
                 {
@@ -48,9 +49,9 @@ namespace SixLabors.ImageSharp.Tests
             }
 
             [Fact]
-            public void Configuration_Width_Height_BackroundColor()
+            public void Configuration_Width_Height_BackgroundColor()
             {
-                Configuration configuration = Configuration.Default.ShallowCopy();
+                Configuration configuration = Configuration.Default.Clone();
                 Rgba32 color = Rgba32.Aquamarine;
 
                 using (var image = new Image<Rgba32>(configuration, 11, 23, color))
@@ -63,101 +64,25 @@ namespace SixLabors.ImageSharp.Tests
                     Assert.Equal(configuration, image.GetConfiguration());
                 }
             }
-        }
 
-        [Fact]
-        public void Load_ByteArray()
-        {
-            Assert.Throws<ArgumentNullException>(() =>
+            [Fact]
+            public void CreateUninitialized()
             {
-                Image.Load<Rgba32>((byte[])null);
-            });
+                Configuration configuration = Configuration.Default.Clone();
 
-            TestFile file = TestFile.Create(TestImages.Bmp.Car);
-            using (Image<Rgba32> image = Image.Load<Rgba32>(file.Bytes))
-            {
-                Assert.Equal(600, image.Width);
-                Assert.Equal(450, image.Height);
-            }
-        }
+                byte dirtyValue = 123;
+                configuration.MemoryAllocator = new TestMemoryAllocator(dirtyValue);
+                var metadata = new ImageMetadata();
 
-        [Fact]
-        public void Load_FileSystemPath()
-        {
-            TestFile file = TestFile.Create(TestImages.Bmp.Car);
-            using (Image<Rgba32> image = Image.Load<Rgba32>(file.FullPath))
-            {
-                Assert.Equal(600, image.Width);
-                Assert.Equal(450, image.Height);
-            }
-        }
-
-        [Fact]
-        public void Load_FileSystemPath_FileNotFound()
-        {
-            System.IO.FileNotFoundException ex = Assert.Throws<System.IO.FileNotFoundException>(
-                () =>
+                using (Image<Gray8> image = Image.CreateUninitialized<Gray8>(configuration, 21, 22, metadata))
                 {
-                    Image.Load<Rgba32>(Guid.NewGuid().ToString());
-                });
-        }
+                    Assert.Equal(21, image.Width);
+                    Assert.Equal(22, image.Height);
+                    Assert.Same(configuration, image.GetConfiguration());
+                    Assert.Same(metadata, image.Metadata);
 
-        [Fact]
-        public void Load_FileSystemPath_NullPath()
-        {
-            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(
-                () =>
-                {
-                    Image.Load<Rgba32>((string)null);
-                });
-        }
-
-        [Fact]
-        public void Save_DetecedEncoding()
-        {
-            string dir = TestEnvironment.CreateOutputDirectory(nameof(ImageTests));
-            string file = System.IO.Path.Combine(dir, "Save_DetecedEncoding.png");
-
-            using (Image<Rgba32> image = new Image<Rgba32>(10, 10))
-            {
-                image.Save(file);
-            }
-
-            using (Image<Rgba32> img = Image.Load(file, out var mime))
-            {
-                Assert.Equal("image/png", mime.DefaultMimeType);
-            }
-        }
-
-        [Fact]
-        public void Save_WhenExtensionIsUnknown_Throws()
-        {
-            string dir = TestEnvironment.CreateOutputDirectory(nameof(ImageTests));
-            string file = System.IO.Path.Combine(dir, "Save_UnknownExtensionsEncoding_Throws.tmp");
-
-            NotSupportedException ex = Assert.Throws<NotSupportedException>(
-                () =>
-                    {
-                        using (Image<Rgba32> image = new Image<Rgba32>(10, 10))
-                        {
-                            image.Save(file);
-                        }
-                    });
-        }
-
-        [Fact]
-        public void Save_SetEncoding()
-        {
-            string dir = TestEnvironment.CreateOutputDirectory(nameof(ImageTests));
-            string file = System.IO.Path.Combine(dir, "Save_SetEncoding.dat");
-
-            using (Image<Rgba32> image = new Image<Rgba32>(10, 10))
-            {
-                image.Save(file, new PngEncoder());
-            }
-            using (Image<Rgba32> img = Image.Load(file, out var mime))
-            {
-                Assert.Equal("image/png", mime.DefaultMimeType);
+                    Assert.Equal(dirtyValue, image[5, 5].PackedValue);
+                }
             }
         }
     }

@@ -2,10 +2,13 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
+using System.Buffers;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+
 using SixLabors.ImageSharp.Memory;
+using SixLabors.Memory;
 
 namespace SixLabors.ImageSharp.Formats.Gif
 {
@@ -49,7 +52,7 @@ namespace SixLabors.ImageSharp.Formats.Gif
         };
 
         /// <summary>
-        /// The maximium number of bits/code.
+        /// The maximum number of bits/code.
         /// </summary>
         private const int MaxBits = 12;
 
@@ -59,11 +62,6 @@ namespace SixLabors.ImageSharp.Formats.Gif
         private const int MaxMaxCode = 1 << MaxBits;
 
         /// <summary>
-        /// The working pixel array.
-        /// </summary>
-        private readonly byte[] pixelArray;
-
-        /// <summary>
         /// The initial code size.
         /// </summary>
         private readonly int initialCodeSize;
@@ -71,17 +69,22 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// <summary>
         /// The hash table.
         /// </summary>
-        private readonly IBuffer<int> hashTable;
+        private readonly IMemoryOwner<int> hashTable;
 
         /// <summary>
         /// The code table.
         /// </summary>
-        private readonly IBuffer<int> codeTable;
+        private readonly IMemoryOwner<int> codeTable;
 
         /// <summary>
         /// Define the storage for the packet accumulator.
         /// </summary>
         private readonly byte[] accumulators = new byte[256];
+
+        /// <summary>
+        /// For dynamic table sizing
+        /// </summary>
+        private readonly int hsize = HashSize;
 
         /// <summary>
         /// The current position within the pixelArray.
@@ -97,11 +100,6 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// maximum code, given bitCount
         /// </summary>
         private int maxCode;
-
-        /// <summary>
-        /// For dynamic table sizing
-        /// </summary>
-        private int hsize = HashSize;
 
         /// <summary>
         /// First unused entry
@@ -168,23 +166,21 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// <summary>
         /// Initializes a new instance of the <see cref="LzwEncoder"/> class.
         /// </summary>
-        /// <param name="memoryManager">The <see cref="MemoryManager"/> to use for buffer allocations.</param>
-        /// <param name="indexedPixels">The array of indexed pixels.</param>
+        /// <param name="memoryAllocator">The <see cref="MemoryAllocator"/> to use for buffer allocations.</param>
         /// <param name="colorDepth">The color depth in bits.</param>
-        public LzwEncoder(MemoryManager memoryManager, byte[] indexedPixels, int colorDepth)
+        public LzwEncoder(MemoryAllocator memoryAllocator, int colorDepth)
         {
-            this.pixelArray = indexedPixels;
             this.initialCodeSize = Math.Max(2, colorDepth);
-
-            this.hashTable = memoryManager.Allocate<int>(HashSize, true);
-            this.codeTable = memoryManager.Allocate<int>(HashSize, true);
+            this.hashTable = memoryAllocator.Allocate<int>(HashSize, AllocationOptions.Clean);
+            this.codeTable = memoryAllocator.Allocate<int>(HashSize, AllocationOptions.Clean);
         }
 
         /// <summary>
         /// Encodes and compresses the indexed pixels to the stream.
         /// </summary>
+        /// <param name="indexedPixels">The span of indexed pixels.</param>
         /// <param name="stream">The stream to write to.</param>
-        public void Encode(Stream stream)
+        public void Encode(ReadOnlySpan<byte> indexedPixels, Stream stream)
         {
             // Write "initial code size" byte
             stream.WriteByte((byte)this.initialCodeSize);
@@ -192,7 +188,7 @@ namespace SixLabors.ImageSharp.Formats.Gif
             this.position = 0;
 
             // Compress and write the pixel data
-            this.Compress(this.initialCodeSize + 1, stream);
+            this.Compress(indexedPixels, this.initialCodeSize + 1, stream);
 
             // Write block terminator
             stream.WriteByte(GifConstants.Terminator);
@@ -214,7 +210,7 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// flush the packet to disk.
         /// </summary>
         /// <param name="c">The character to add.</param>
-        /// <param name="accumulatorsRef">The reference to the storage for packat accumulators</param>
+        /// <param name="accumulatorsRef">The reference to the storage for packet accumulators</param>
         /// <param name="stream">The stream to write to.</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void AddCharacter(byte c, ref byte accumulatorsRef, Stream stream)
@@ -246,15 +242,16 @@ namespace SixLabors.ImageSharp.Formats.Gif
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ResetCodeTable()
         {
-            this.hashTable.Span.Fill(-1);
+            this.hashTable.GetSpan().Fill(-1);
         }
 
         /// <summary>
         /// Compress the packets to the stream.
         /// </summary>
+        /// <param name="indexedPixels">The span of indexed pixels.</param>
         /// <param name="intialBits">The initial bits.</param>
         /// <param name="stream">The stream to write to.</param>
-        private void Compress(int intialBits, Stream stream)
+        private void Compress(ReadOnlySpan<byte> indexedPixels, int intialBits, Stream stream)
         {
             int fcode;
             int c;
@@ -276,7 +273,7 @@ namespace SixLabors.ImageSharp.Formats.Gif
 
             this.accumulatorCount = 0; // clear packet
 
-            ent = this.NextPixel();
+            ent = this.NextPixel(indexedPixels);
 
             // TODO: PERF: It looks likt hshift could be calculated once statically.
             hshift = 0;
@@ -293,12 +290,12 @@ namespace SixLabors.ImageSharp.Formats.Gif
 
             this.Output(this.clearCode, stream);
 
-            ref int hashTableRef = ref MemoryMarshal.GetReference(this.hashTable.Span);
-            ref int codeTableRef = ref MemoryMarshal.GetReference(this.codeTable.Span);
+            ref int hashTableRef = ref MemoryMarshal.GetReference(this.hashTable.GetSpan());
+            ref int codeTableRef = ref MemoryMarshal.GetReference(this.codeTable.GetSpan());
 
-            while (this.position < this.pixelArray.Length)
+            while (this.position < indexedPixels.Length)
             {
-                c = this.NextPixel();
+                c = this.NextPixel(indexedPixels);
 
                 fcode = (c << MaxBits) + ent;
                 int i = (c << hshift) ^ ent /* = 0 */;
@@ -312,10 +309,10 @@ namespace SixLabors.ImageSharp.Formats.Gif
                 // Non-empty slot
                 if (Unsafe.Add(ref hashTableRef, i) >= 0)
                 {
-                    int disp = hsizeReg - i;
-                    if (i == 0)
+                    int disp = 1;
+                    if (i != 0)
                     {
-                        disp = 1;
+                        disp = hsizeReg - i;
                     }
 
                     do
@@ -373,13 +370,14 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// <summary>
         /// Reads the next pixel from the image.
         /// </summary>
+        /// <param name="indexedPixels">The span of indexed pixels.</param>
         /// <returns>
         /// The <see cref="int"/>
         /// </returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int NextPixel()
+        private int NextPixel(ReadOnlySpan<byte> indexedPixels)
         {
-            return this.pixelArray[this.position++] & 0xff;
+            return indexedPixels[this.position++] & 0xFF;
         }
 
         /// <summary>

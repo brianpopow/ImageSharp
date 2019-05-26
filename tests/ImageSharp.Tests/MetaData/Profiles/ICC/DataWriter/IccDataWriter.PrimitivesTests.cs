@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using SixLabors.ImageSharp.MetaData.Profiles.Icc;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Icc
@@ -42,7 +42,7 @@ namespace SixLabors.ImageSharp.Tests.Icc
             byte[] output = writer.GetData();
 
             Assert.Equal(0, count);
-            Assert.Equal(new byte[0], output);
+            Assert.Equal(Array.Empty<byte>(), output);
         }
 
         [Fact]
@@ -62,7 +62,7 @@ namespace SixLabors.ImageSharp.Tests.Icc
             byte[] output = writer.GetData();
 
             Assert.Equal(0, count);
-            Assert.Equal(new byte[0], output);
+            Assert.Equal(Array.Empty<byte>(), output);
         }
 
         [Theory]

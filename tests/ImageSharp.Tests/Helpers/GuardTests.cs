@@ -3,7 +3,10 @@
 
 using System;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+
 using Xunit;
+// ReSharper disable InconsistentNaming
 
 namespace SixLabors.ImageSharp.Tests.Helpers
 {
@@ -12,13 +15,46 @@ namespace SixLabors.ImageSharp.Tests.Helpers
     /// </summary>
     public class GuardTests
     {
+        class Test
+        {
+        }
+
+        [Theory]
+        [InlineData(0, 0)]
+        [InlineData(0, 1)]
+        [InlineData(0, 42)]
+        [InlineData(1, 1)]
+        [InlineData(10, 42)]
+        [InlineData(42, 42)]
+        public void DestinationShouldNotBeTooShort_WhenOk(int sourceLength, int destLength)
+        {
+            ReadOnlySpan<int> source = new int[sourceLength];
+            Span<float> dest = new float[destLength];
+
+            Guard.DestinationShouldNotBeTooShort(source, dest, nameof(dest));
+        }
+
+        [Theory]
+        [InlineData(1, 0)]
+        [InlineData(42, 41)]
+        public void DestinationShouldNotBeTooShort_WhenThrows(int sourceLength, int destLength)
+        {
+            Assert.ThrowsAny<ArgumentException>(
+                () =>
+                    {
+                        ReadOnlySpan<int> source = new int[sourceLength];
+                        Span<float> dest = new float[destLength];
+                        Guard.DestinationShouldNotBeTooShort(source, dest, nameof(dest));
+                    });
+        }
+
         /// <summary>
         /// Tests that the <see cref="M:Guard.NotNull"/> method throws when the argument is null.
         /// </summary>
         [Fact]
         public void NotNullThrowsWhenArgIsNull()
         {
-            Assert.Throws<ArgumentNullException>(() => Guard.NotNull(null, "foo"));
+            Assert.Throws<ArgumentNullException>(() => Guard.NotNull((Test)null, "foo"));
         }
 
         /// <summary>
@@ -27,7 +63,7 @@ namespace SixLabors.ImageSharp.Tests.Helpers
         [Fact]
         public void NotNullThrowsWhenArgNameEmpty()
         {
-            Assert.Throws<ArgumentNullException>(() => Guard.NotNull(null, string.Empty));
+            Assert.Throws<ArgumentNullException>(() => Guard.NotNull((Test)null, string.Empty));
         }
 
         /// <summary>

@@ -1,60 +1,66 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
+using System.Collections.Generic;
 using SixLabors.ImageSharp.Formats;
-using SixLabors.ImageSharp.Formats.Gif;
 
-namespace SixLabors.ImageSharp.MetaData
+namespace SixLabors.ImageSharp.Metadata
 {
     /// <summary>
     /// Encapsulates the metadata of an image frame.
     /// </summary>
-    public sealed class ImageFrameMetaData
+    public sealed class ImageFrameMetadata : IDeepCloneable<ImageFrameMetadata>
     {
+        private readonly Dictionary<IImageFormat, IDeepCloneable> formatMetadata = new Dictionary<IImageFormat, IDeepCloneable>();
+
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImageFrameMetaData"/> class.
+        /// Initializes a new instance of the <see cref="ImageFrameMetadata"/> class.
         /// </summary>
-        internal ImageFrameMetaData()
+        internal ImageFrameMetadata()
         {
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImageFrameMetaData"/> class
+        /// Initializes a new instance of the <see cref="ImageFrameMetadata"/> class
         /// by making a copy from other metadata.
         /// </summary>
         /// <param name="other">
-        /// The other <see cref="ImageFrameMetaData"/> to create this instance from.
+        /// The other <see cref="ImageFrameMetadata"/> to create this instance from.
         /// </param>
-        internal ImageFrameMetaData(ImageFrameMetaData other)
+        internal ImageFrameMetadata(ImageFrameMetadata other)
         {
             DebugGuard.NotNull(other, nameof(other));
 
-            this.FrameDelay = other.FrameDelay;
-            this.DisposalMethod = other.DisposalMethod;
+            foreach (KeyValuePair<IImageFormat, IDeepCloneable> meta in other.formatMetadata)
+            {
+                this.formatMetadata.Add(meta.Key, meta.Value.DeepClone());
+            }
         }
 
-        /// <summary>
-        /// Gets or sets the frame delay for animated images.
-        /// If not 0, when utilized in Gif animation, this field specifies the number of hundredths (1/100) of a second to
-        /// wait before continuing with the processing of the Data Stream.
-        /// The clock starts ticking immediately after the graphic is rendered.
-        /// </summary>
-        public int FrameDelay { get; set; }
+        /// <inheritdoc/>
+        public ImageFrameMetadata DeepClone() => new ImageFrameMetadata(this);
 
         /// <summary>
-        /// Gets or sets the disposal method for animated images.
-        /// Primarily used in Gif animation, this field indicates the way in which the graphic is to
-        /// be treated after being displayed.
+        /// Gets the metadata value associated with the specified key.
         /// </summary>
-        public DisposalMethod DisposalMethod { get; set; }
-
-        /// <summary>
-        /// Clones this ImageFrameMetaData.
-        /// </summary>
-        /// <returns>The cloned instance.</returns>
-        public ImageFrameMetaData Clone()
+        /// <typeparam name="TFormatMetadata">The type of format metadata.</typeparam>
+        /// <typeparam name="TFormatFrameMetadata">The type of format frame metadata.</typeparam>
+        /// <param name="key">The key of the value to get.</param>
+        /// <returns>
+        /// The <typeparamref name="TFormatFrameMetadata"/>.
+        /// </returns>
+        public TFormatFrameMetadata GetFormatMetadata<TFormatMetadata, TFormatFrameMetadata>(IImageFormat<TFormatMetadata, TFormatFrameMetadata> key)
+            where TFormatMetadata : class
+            where TFormatFrameMetadata : class, IDeepCloneable
         {
-            return new ImageFrameMetaData(this);
+            if (this.formatMetadata.TryGetValue(key, out IDeepCloneable meta))
+            {
+                return (TFormatFrameMetadata)meta;
+            }
+
+            TFormatFrameMetadata newMeta = key.CreateDefaultFormatFrameMetadata();
+            this.formatMetadata[key] = newMeta;
+            return newMeta;
         }
     }
 }

@@ -4,10 +4,9 @@
 using System.Numerics;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing.Drawing.Brushes;
-using SixLabors.ImageSharp.Processing.Drawing.Pens;
-using SixLabors.ImageSharp.Processing.Drawing.Processors;
-using SixLabors.ImageSharp.Processing.Text;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Text;
+using SixLabors.Primitives;
 using SixLabors.Shapes;
 using Xunit;
 
@@ -15,9 +14,9 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Text
 {
     public class DrawText : BaseImageOperationsExtensionTest
     {
-        Rgba32 color = Rgba32.HotPink;
+        Rgba32 color = Color.HotPink;
 
-        SolidBrush<Rgba32> brush = Brushes.Solid(Rgba32.HotPink);
+        SolidBrush brush = Brushes.Solid(Color.HotPink);
 
         IPath path = new SixLabors.Shapes.Path(
             new LinearLineSegment(
@@ -40,69 +39,57 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Text
                 new TextGraphicsOptions(true),
                 "123",
                 this.Font,
-                Brushes.Solid(Rgba32.Red),
+                Brushes.Solid(Color.Red),
                 null,
                 Vector2.Zero);
 
-            this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void FillsForEachACharachterWhenBrushSetAndNotPenDefaultOptions()
         {
-            this.operations.DrawText("123", this.Font, Brushes.Solid(Rgba32.Red), null, Vector2.Zero);
+            this.operations.DrawText("123", this.Font, Brushes.Solid(Color.Red), null, Vector2.Zero);
 
-            this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void FillsForEachACharachterWhenBrushSet()
         {
-            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Brushes.Solid(Rgba32.Red), Vector2.Zero);
+            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Brushes.Solid(Color.Red), Vector2.Zero);
 
-            this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void FillsForEachACharachterWhenBrushSetDefaultOptions()
         {
-            this.operations.DrawText("123", this.Font, Brushes.Solid(Rgba32.Red), Vector2.Zero);
+            this.operations.DrawText("123", this.Font, Brushes.Solid(Color.Red), Vector2.Zero);
 
-            this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void FillsForEachACharachterWhenColorSet()
         {
-            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Rgba32.Red, Vector2.Zero);
+            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Color.Red, Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
 
-            SolidBrush<Rgba32> brush = Assert.IsType<SolidBrush<Rgba32>>(processor.Brush);
-            Assert.Equal(Rgba32.Red, brush.Color);
+            SolidBrush brush = Assert.IsType<SolidBrush>(processor.Brush);
+            Assert.Equal(Color.Red, brush.Color);
         }
 
         [Fact]
         public void FillsForEachACharachterWhenColorSetDefaultOptions()
         {
-            this.operations.DrawText("123", this.Font, Rgba32.Red, Vector2.Zero);
+            this.operations.DrawText("123", this.Font, Color.Red, Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
 
-            SolidBrush<Rgba32> brush = Assert.IsType<SolidBrush<Rgba32>>(processor.Brush);
-            Assert.Equal(Rgba32.Red, brush.Color);
+            SolidBrush brush = Assert.IsType<SolidBrush>(processor.Brush);
+            Assert.Equal(Color.Red, brush.Color);
         }
 
         [Fact]
@@ -113,42 +100,41 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Text
                 "123",
                 this.Font,
                 null,
-                Pens.Dash(Rgba32.Red, 1),
+                Pens.Dash(Color.Red, 1),
                 Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void DrawForEachACharachterWhenPenSetAndNotBrushDefaultOptions()
         {
-            this.operations.DrawText("123", this.Font, null, Pens.Dash(Rgba32.Red, 1), Vector2.Zero);
+            this.operations.DrawText("123", this.Font, null, Pens.Dash(Color.Red, 1), Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void DrawForEachACharachterWhenPenSet()
         {
-            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Pens.Dash(Rgba32.Red, 1), Vector2.Zero);
+            this.operations.DrawText(new TextGraphicsOptions(true), "123", this.Font, Pens.Dash(Color.Red, 1), Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
         }
 
         [Fact]
         public void DrawForEachACharachterWhenPenSetDefaultOptions()
         {
-            this.operations.DrawText("123", this.Font, Pens.Dash(Rgba32.Red, 1), Vector2.Zero);
+            this.operations.DrawText("123", this.Font, Pens.Dash(Color.Red, 1), Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
+
+            Assert.Equal("123", processor.Text);
+            Assert.Equal(this.Font, processor.Font);
+            var penBrush = Assert.IsType<SolidBrush>(processor.Pen.StrokeFill);
+            Assert.Equal(Color.Red, penBrush.Color);
+            Assert.Equal(1, processor.Pen.StrokeWidth);
+            Assert.Equal(PointF.Empty, processor.Location);
         }
 
         [Fact]
@@ -158,54 +144,20 @@ namespace SixLabors.ImageSharp.Tests.Drawing.Text
                 new TextGraphicsOptions(true),
                 "123",
                 this.Font,
-                Brushes.Solid(Rgba32.Red),
-                Pens.Dash(Rgba32.Red, 1),
+                Brushes.Solid(Color.Red),
+                Pens.Dash(Color.Red, 1),
                 Vector2.Zero);
 
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
+            var processor = this.Verify<DrawTextProcessor>(0);
 
-            this.Verify<FillRegionProcessor<Rgba32>>(3);
-            this.Verify<FillRegionProcessor<Rgba32>>(4);
-            this.Verify<FillRegionProcessor<Rgba32>>(5);
-        }
-
-        [Fact]
-        public void DrawForEachACharachterWhenPenSetAndFillFroEachWhenBrushSetDefaultOptions()
-        {
-            this.operations.DrawText("123", this.Font, Brushes.Solid(Rgba32.Red), Pens.Dash(Rgba32.Red, 1), Vector2.Zero);
-
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-            this.Verify<FillRegionProcessor<Rgba32>>(2);
-            this.Verify<FillRegionProcessor<Rgba32>>(3);
-            this.Verify<FillRegionProcessor<Rgba32>>(4);
-            this.Verify<FillRegionProcessor<Rgba32>>(5);
-        }
-
-        [Fact]
-        public void BrushAppliesBeforePen()
-        {
-            this.operations.DrawText(
-                new TextGraphicsOptions(true),
-                "1",
-                this.Font,
-                Brushes.Solid(Rgba32.Red),
-                Pens.Dash(Rgba32.Red, 1),
-                Vector2.Zero);
-
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
-        }
-
-        [Fact]
-        public void BrushAppliesBeforPenDefaultOptions()
-        {
-            this.operations.DrawText("1", this.Font, Brushes.Solid(Rgba32.Red), Pens.Dash(Rgba32.Red, 1), Vector2.Zero);
-
-            var processor = this.Verify<FillRegionProcessor<Rgba32>>(0);
-            this.Verify<FillRegionProcessor<Rgba32>>(1);
+            Assert.Equal("123", processor.Text);
+            Assert.Equal(this.Font, processor.Font);
+            var brush = Assert.IsType<SolidBrush>(processor.Brush);
+            Assert.Equal(Color.Red, brush.Color);
+            Assert.Equal(PointF.Empty, processor.Location);
+            var penBrush = Assert.IsType<SolidBrush>(processor.Pen.StrokeFill);
+            Assert.Equal(Color.Red, penBrush.Color);
+            Assert.Equal(1, processor.Pen.StrokeWidth);
         }
     }
 }

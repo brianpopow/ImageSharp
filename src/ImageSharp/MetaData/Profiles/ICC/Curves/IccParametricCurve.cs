@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// A parametric curve
@@ -125,7 +125,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccParametricCurve other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -148,34 +148,21 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccParametricCurve other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = (int)this.Type;
-                hashCode = (hashCode * 397) ^ this.G.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.A.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.B.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.C.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.D.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.E.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.F.GetHashCode();
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Type,
+                this.G.GetHashCode(),
+                this.A.GetHashCode(),
+                this.B.GetHashCode(),
+                this.C.GetHashCode(),
+                this.D.GetHashCode(),
+                this.E.GetHashCode(),
+                this.F.GetHashCode());
         }
     }
 }

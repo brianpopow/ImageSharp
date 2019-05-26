@@ -4,7 +4,7 @@
 using System;
 using System.Text;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Provides methods to write ICC data types
@@ -178,7 +178,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return 0;
             }
 
-            byte[] data = AsciiEncoding.GetBytes(value);
+            byte[] data = Encoding.ASCII.GetBytes(value);
             this.dataStream.Write(data, 0, data.Length);
             return data.Length;
         }
@@ -199,7 +199,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
 
             Guard.MustBeGreaterThan(length, 0, nameof(length));
 
-            if (value == null)
+            if (value is null)
             {
                 value = string.Empty;
             }
@@ -215,7 +215,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
 
             value = value.Substring(0, Math.Min(length - lengthAdjust, value.Length));
 
-            byte[] textData = AsciiEncoding.GetBytes(value);
+            byte[] textData = Encoding.ASCII.GetBytes(value);
             int actualLength = Math.Min(length - lengthAdjust, textData.Length);
             this.dataStream.Write(textData, 0, actualLength);
             for (int i = 0; i < length - actualLength; i++)

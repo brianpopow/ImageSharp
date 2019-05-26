@@ -2,9 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This type describes various screening parameters including
@@ -31,10 +30,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccScreeningTagDataEntry(IccScreeningFlag flags, IccScreeningChannel[] channels, IccProfileTag tagSignature)
             : base(IccTypeSignature.Screening, tagSignature)
         {
-            Guard.NotNull(channels, nameof(channels));
-
             this.Flags = flags;
-            this.Channels = channels;
+            this.Channels = channels ?? throw new ArgumentNullException(nameof(channels));
         }
 
         /// <summary>
@@ -56,7 +53,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public bool Equals(IccScreeningTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -68,35 +65,19 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
 
             return base.Equals(other)
                 && this.Flags == other.Flags
-                && this.Channels.SequenceEqual(other.Channels);
+                && this.Channels.AsSpan().SequenceEqual(other.Channels);
         }
 
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccScreeningTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (int)this.Flags;
-                hashCode = (hashCode * 397) ^ (this.Channels?.GetHashCode() ?? 0);
-                return hashCode;
-            }
+            return HashCode.Combine(this.Signature, this.Flags, this.Channels);
         }
     }
 }

@@ -3,7 +3,7 @@
 
 using System;
 using System.Numerics;
-using SixLabors.ImageSharp.MetaData.Profiles.Icc;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Icc
@@ -23,11 +23,11 @@ namespace SixLabors.ImageSharp.Tests.Icc
 
         [Theory]
         [MemberData(nameof(IccTestDataNonPrimitives.VersionNumberTestData), MemberType = typeof(IccTestDataNonPrimitives))]
-        public void ReadVersionNumber(byte[] data, Version expected)
+        public void ReadVersionNumber(byte[] data, IccVersion expected)
         {
             IccDataReader reader = CreateReader(data);
 
-            Version output = reader.ReadVersionNumber();
+            IccVersion output = reader.ReadVersionNumber();
 
             Assert.Equal(expected, output);
         }

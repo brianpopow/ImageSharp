@@ -4,7 +4,7 @@
 using System;
 using System.Globalization;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// A string with a specific locale.
@@ -29,11 +29,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <param name="text">The text value of this string</param>
         public IccLocalizedString(CultureInfo culture, string text)
         {
-            Guard.NotNull(culture, nameof(culture));
-            Guard.NotNull(text, nameof(text));
-
-            this.Culture = culture;
-            this.Text = text;
+            this.Culture = culture ?? throw new ArgumentNullException(nameof(culture));
+            this.Text = text ?? throw new ArgumentNullException(nameof(text));
         }
 
         /// <summary>
@@ -52,9 +49,6 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
             this.Text == other.Text;
 
         /// <inheritdoc />
-        public override string ToString()
-        {
-            return $"{this.Culture.Name}: {this.Text}";
-        }
+        public override string ToString() => $"{this.Culture.Name}: {this.Text}";
     }
 }

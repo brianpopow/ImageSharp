@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// The parametricCurveType describes a one-dimensional curve by
@@ -28,7 +28,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccParametricCurveTagDataEntry(IccParametricCurve curve, IccProfileTag tagSignature)
             : base(IccTypeSignature.ParametricCurve, tagSignature)
         {
-            this.Curve = curve;
+            this.Curve = curve ?? throw new ArgumentNullException(nameof(curve));
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccParametricCurveTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -61,26 +61,10 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccParametricCurveTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc />
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.Curve?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.Curve);
     }
 }

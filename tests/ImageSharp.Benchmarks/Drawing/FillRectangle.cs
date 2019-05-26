@@ -1,7 +1,5 @@
-﻿// <copyright file="Crop.cs" company="James Jackson-South">
-// Copyright (c) James Jackson-South and contributors.
+﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
-// </copyright>
 
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -10,29 +8,23 @@ using BenchmarkDotNet.Attributes;
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Drawing;
-using SixLabors.ImageSharp.Processing.Overlays;
 using CoreRectangle = SixLabors.Primitives.Rectangle;
 using CoreSize = SixLabors.Primitives.Size;
 
 namespace SixLabors.ImageSharp.Benchmarks
 {
-
-
     public class FillRectangle : BenchmarkBase
     {
         [Benchmark(Baseline = true, Description = "System.Drawing Fill Rectangle")]
         public Size FillRectangleSystemDrawing()
         {
-            using (Bitmap destination = new Bitmap(800, 800))
+            using (var destination = new Bitmap(800, 800))
+            using (var graphics = Graphics.FromImage(destination))
             {
-
-                using (Graphics graphics = Graphics.FromImage(destination))
-                {
-                    graphics.InterpolationMode = InterpolationMode.Default;
-                    graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    graphics.FillRectangle(Brushes.HotPink, new Rectangle(10, 10, 190, 140));
-                }
+                graphics.InterpolationMode = InterpolationMode.Default;
+                graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                graphics.FillRectangle(System.Drawing.Brushes.HotPink, new Rectangle(10, 10, 190, 140));
+                
                 return destination.Size;
             }
         }
@@ -40,7 +32,7 @@ namespace SixLabors.ImageSharp.Benchmarks
         [Benchmark(Description = "ImageSharp Fill Rectangle")]
         public CoreSize FillRactangleCore()
         {
-            using (Image<Rgba32> image = new Image<Rgba32>(800, 800))
+            using (var image = new Image<Rgba32>(800, 800))
             {
                 image.Mutate(x => x.Fill(Rgba32.HotPink, new CoreRectangle(10, 10, 190, 140)));
 
@@ -51,7 +43,7 @@ namespace SixLabors.ImageSharp.Benchmarks
         [Benchmark(Description = "ImageSharp Fill Rectangle - As Polygon")]
         public CoreSize FillPolygonCore()
         {
-            using (Image<Rgba32> image = new Image<Rgba32>(800, 800))
+            using (var image = new Image<Rgba32>(800, 800))
             {
                 image.Mutate(x => x.FillPolygon(
                     Rgba32.HotPink,

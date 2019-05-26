@@ -3,17 +3,16 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.IO;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Primitives;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
+namespace SixLabors.ImageSharp.Metadata.Profiles.Exif
 {
     /// <summary>
     /// Represents an EXIF profile providing access to the collection of values.
     /// </summary>
-    public sealed class ExifProfile
+    public sealed class ExifProfile : IDeepCloneable<ExifProfile>
     {
         /// <summary>
         /// The byte array to read the EXIF profile from.
@@ -24,11 +23,6 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// The collection of EXIF values
         /// </summary>
         private List<ExifValue> values;
-
-        /// <summary>
-        /// The list of invalid EXIF tags
-        /// </summary>
-        private IReadOnlyList<ExifTag> invalidTags;
 
         /// <summary>
         /// The thumbnail offset position in the byte stream
@@ -56,7 +50,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         {
             this.Parts = ExifParts.All;
             this.data = data;
-            this.invalidTags = new List<ExifTag>();
+            this.InvalidTags = Array.Empty<ExifTag>();
         }
 
         /// <summary>
@@ -64,29 +58,30 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// by making a copy from another EXIF profile.
         /// </summary>
         /// <param name="other">The other EXIF profile, where the clone should be made from.</param>
-        /// <exception cref="System.ArgumentNullException"><paramref name="other"/> is null.</exception>
-        public ExifProfile(ExifProfile other)
+        private ExifProfile(ExifProfile other)
         {
-            Guard.NotNull(other, nameof(other));
-
             this.Parts = other.Parts;
             this.thumbnailLength = other.thumbnailLength;
             this.thumbnailOffset = other.thumbnailOffset;
-            this.invalidTags = new List<ExifTag>(other.invalidTags);
+
+            this.InvalidTags = other.InvalidTags.Count > 0
+                ? new List<ExifTag>(other.InvalidTags)
+                : (IReadOnlyList<ExifTag>)Array.Empty<ExifTag>();
+
             if (other.values != null)
             {
                 this.values = new List<ExifValue>(other.Values.Count);
 
                 foreach (ExifValue value in other.Values)
                 {
-                    this.values.Add(new ExifValue(value));
+                    this.values.Add(value.DeepClone());
                 }
             }
 
             if (other.data != null)
             {
                 this.data = new byte[other.data.Length];
-                Buffer.BlockCopy(other.data, 0, this.data, 0, other.data.Length);
+                other.data.AsSpan().CopyTo(this.data);
             }
         }
 
@@ -98,7 +93,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// <summary>
         /// Gets the tags that where found but contained an invalid value.
         /// </summary>
-        public IReadOnlyList<ExifTag> InvalidTags => this.invalidTags;
+        public IReadOnlyList<ExifTag> InvalidTags { get; private set; }
 
         /// <summary>
         /// Gets the values of this EXIF profile.
@@ -129,7 +124,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return null;
             }
 
-            if (this.data == null || this.data.Length < (this.thumbnailOffset + this.thumbnailLength))
+            if (this.data is null || this.data.Length < (this.thumbnailOffset + this.thumbnailLength))
             {
                 return null;
             }
@@ -236,7 +231,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// <returns>The <see cref="T:byte[]"/></returns>
         public byte[] ToByteArray()
         {
-            if (this.values == null)
+            if (this.values is null)
             {
                 return this.data;
             }
@@ -250,20 +245,24 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             return writer.GetData();
         }
 
+        /// <inheritdoc/>
+        public ExifProfile DeepClone() => new ExifProfile(this);
+
         /// <summary>
-        /// Synchronizes the profiles with the specified meta data.
+        /// Synchronizes the profiles with the specified metadata.
         /// </summary>
-        /// <param name="metaData">The meta data.</param>
-        internal void Sync(ImageMetaData metaData)
+        /// <param name="metadata">The metadata.</param>
+        internal void Sync(ImageMetadata metadata)
         {
-            this.SyncResolution(ExifTag.XResolution, metaData.HorizontalResolution);
-            this.SyncResolution(ExifTag.YResolution, metaData.VerticalResolution);
+            this.SyncResolution(ExifTag.XResolution, metadata.HorizontalResolution);
+            this.SyncResolution(ExifTag.YResolution, metadata.VerticalResolution);
         }
 
         private void SyncResolution(ExifTag tag, double resolution)
         {
             ExifValue value = this.GetValue(tag);
-            if (value == null)
+
+            if (value is null)
             {
                 return;
             }
@@ -284,7 +283,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return;
             }
 
-            if (this.data == null)
+            if (this.data is null)
             {
                 this.values = new List<ExifValue>();
                 return;
@@ -294,7 +293,10 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
 
             this.values = reader.ReadValues();
 
-            this.invalidTags = new List<ExifTag>(reader.InvalidTags);
+            this.InvalidTags = reader.InvalidTags.Count > 0
+                ? new List<ExifTag>(reader.InvalidTags)
+                : (IReadOnlyList<ExifTag>)Array.Empty<ExifTag>();
+
             this.thumbnailOffset = (int)reader.ThumbnailOffset;
             this.thumbnailLength = (int)reader.ThumbnailLength;
         }

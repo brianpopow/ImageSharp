@@ -4,6 +4,7 @@
 using System;
 
 using SixLabors.ImageSharp.Formats.Jpeg.Components;
+using SixLabors.ImageSharp.Memory;
 using SixLabors.ImageSharp.PixelFormats;
 
 using Xunit;
@@ -16,18 +17,16 @@ namespace SixLabors.ImageSharp.Tests.Formats.Jpg
             where TPixel : struct, IPixel<TPixel>
         {
             var image = new Image<TPixel>(10, 10);
-            using (PixelAccessor<TPixel> pixels = image.Lock())
+            Buffer2D<TPixel> pixels = image.GetRootFramePixelBuffer();
+            for (int i = 0; i < 10; i++)
             {
-                for (int i = 0; i < 10; i++)
+                for (int j = 0; j < 10; j++)
                 {
-                    for (int j = 0; j < 10; j++)
-                    {
-                        var rgba = new Rgba32((byte)(i + 1), (byte)(j + 1), (byte)200, (byte)255);
-                        var color = default(TPixel);
-                        color.PackFromRgba32(rgba);
+                    var rgba = new Rgba32((byte)(i + 1), (byte)(j + 1), (byte)200, (byte)255);
+                    var color = default(TPixel);
+                    color.FromRgba32(rgba);
 
-                        pixels[i, j] = color;
-                    }
+                    pixels[i, j] = color;
                 }
             }
 

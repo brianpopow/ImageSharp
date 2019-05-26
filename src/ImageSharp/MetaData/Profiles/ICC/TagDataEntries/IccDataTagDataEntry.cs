@@ -2,10 +2,9 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Linq;
 using System.Text;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// The dataType is a simple data structure that contains
@@ -13,8 +12,6 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
     /// </summary>
     internal sealed class IccDataTagDataEntry : IccTagDataEntry, IEquatable<IccDataTagDataEntry>
     {
-        private static readonly Encoding AsciiEncoding = Encoding.GetEncoding("ASCII");
-
         /// <summary>
         /// Initializes a new instance of the <see cref="IccDataTagDataEntry"/> class.
         /// </summary>
@@ -43,8 +40,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccDataTagDataEntry(byte[] data, bool isAscii, IccProfileTag tagSignature)
             : base(IccTypeSignature.Data, tagSignature)
         {
-            Guard.NotNull(data, nameof(data));
-            this.Data = data;
+            this.Data = data ?? throw new ArgumentException(nameof(data));
             this.IsAscii = isAscii;
         }
 
@@ -62,7 +58,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// Gets the <see cref="Data"/> decoded as 7bit ASCII.
         /// If <see cref="IsAscii"/> is false, returns null
         /// </summary>
-        public string AsciiString => this.IsAscii ? AsciiEncoding.GetString(this.Data, 0, this.Data.Length) : null;
+        public string AsciiString => this.IsAscii ? Encoding.ASCII.GetString(this.Data, 0, this.Data.Length) : null;
 
         /// <inheritdoc/>
         public override bool Equals(IccTagDataEntry other)
@@ -73,7 +69,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccDataTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -83,35 +79,22 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return true;
             }
 
-            return base.Equals(other) && this.Data.SequenceEqual(other.Data) && this.IsAscii == other.IsAscii;
+            return base.Equals(other) && this.Data.AsSpan().SequenceEqual(other.Data) && this.IsAscii == other.IsAscii;
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccDataTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (this.Data?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ this.IsAscii.GetHashCode();
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Signature,
+                this.Data,
+                this.IsAscii);
         }
     }
 }

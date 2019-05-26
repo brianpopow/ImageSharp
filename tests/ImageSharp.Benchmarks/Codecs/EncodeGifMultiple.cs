@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Drawing.Imaging;
 using BenchmarkDotNet.Attributes;
 using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.Processing.Quantization;
+using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace SixLabors.ImageSharp.Benchmarks.Codecs
 {
@@ -23,7 +23,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs
             this.ForEachImageSharpImage((img, ms) =>
             {
                 // Try to get as close to System.Drawing's output as possible
-                var options = new GifEncoder { Quantizer = new PaletteQuantizer(false) };
+                var options = new GifEncoder { Quantizer = new WebSafePaletteQuantizer(false) };
                 img.Save(ms, options); return null;
             });
         }

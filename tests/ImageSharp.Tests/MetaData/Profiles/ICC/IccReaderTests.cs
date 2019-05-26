@@ -1,7 +1,7 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
-using SixLabors.ImageSharp.MetaData.Profiles.Icc;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Icc
@@ -15,7 +15,7 @@ namespace SixLabors.ImageSharp.Tests.Icc
 
             IccProfile output = reader.Read(IccTestDataProfiles.Header_Random_Array);
 
-            Assert.Equal(0, output.Entries.Count);
+            Assert.Equal(0, output.Entries.Length);
             Assert.NotNull(output.Header);
 
             IccProfileHeader header = output.Header;
@@ -46,7 +46,7 @@ namespace SixLabors.ImageSharp.Tests.Icc
 
             IccProfile output = reader.Read(IccTestDataProfiles.Profile_Random_Array);
 
-            Assert.Equal(2, output.Entries.Count);
+            Assert.Equal(2, output.Entries.Length);
             Assert.True(ReferenceEquals(output.Entries[0], output.Entries[1]));
         }
 

@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// A CLUT (color lookup table) element to process data
@@ -17,8 +17,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccClutProcessElement(IccClut clutValue)
             : base(IccMultiProcessElementSignature.Clut, clutValue?.InputChannelCount ?? 1, clutValue?.OutputChannelCount ?? 1)
         {
-            Guard.NotNull(clutValue, nameof(clutValue));
-            this.ClutValue = clutValue;
+            this.ClutValue = clutValue ?? throw new ArgumentNullException(nameof(clutValue));
         }
 
         /// <summary>

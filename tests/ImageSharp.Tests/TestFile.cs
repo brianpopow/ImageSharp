@@ -28,7 +28,7 @@ namespace SixLabors.ImageSharp.Tests
         /// </summary>
         // ReSharper disable once InconsistentNaming
         private static readonly Lazy<string> inputImagesDirectory = new Lazy<string>(() => TestEnvironment.InputImagesDirectoryFullPath);
-        
+
         /// <summary>
         /// The image (lazy initialized value)
         /// </summary>
@@ -74,9 +74,10 @@ namespace SixLabors.ImageSharp.Tests
         private Image<Rgba32> Image => this.image ?? (this.image = ImageSharp.Image.Load<Rgba32>(this.Bytes));
 
         /// <summary>
+        /// Gets the input image directory.
         /// </summary>
         private static string InputImagesDirectory => inputImagesDirectory.Value;
-        
+
         /// <summary>
         /// Gets the full qualified path to the input test file.
         /// </summary>
@@ -133,7 +134,7 @@ namespace SixLabors.ImageSharp.Tests
         /// <returns>
         /// The <see cref="ImageSharp.Image"/>.
         /// </returns>
-        public Image<Rgba32> CreateImage()
+        public Image<Rgba32> CreateRgba32Image()
         {
             return this.Image.Clone();
         }
@@ -144,9 +145,9 @@ namespace SixLabors.ImageSharp.Tests
         /// <returns>
         /// The <see cref="ImageSharp.Image"/>.
         /// </returns>
-        public Image<Rgba32> CreateImage(IImageDecoder decoder)
+        public Image<Rgba32> CreateRgba32Image(IImageDecoder decoder)
         {
-            return ImageSharp.Image.Load(this.Image.GetConfiguration(), this.Bytes, decoder);
+            return ImageSharp.Image.Load<Rgba32>(this.Image.GetConfiguration(), this.Bytes, decoder);
         }
     }
 }

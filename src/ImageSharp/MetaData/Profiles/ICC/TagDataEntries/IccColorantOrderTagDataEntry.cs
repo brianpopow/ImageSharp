@@ -2,9 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This tag specifies the laydown order in which colorants
@@ -49,7 +48,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccColorantOrderTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -59,32 +58,19 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return true;
             }
 
-            return base.Equals(other) && this.ColorantNumber.SequenceEqual(other.ColorantNumber);
+            return base.Equals(other) && this.ColorantNumber.AsSpan().SequenceEqual(other.ColorantNumber);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccColorantOrderTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.ColorantNumber?.GetHashCode() ?? 0);
-            }
+            return HashCode.Combine(this.Signature, this.ColorantNumber);
         }
     }
 }

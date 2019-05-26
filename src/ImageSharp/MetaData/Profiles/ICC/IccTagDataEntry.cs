@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// The data of an ICC tag entry
@@ -44,32 +44,13 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccTagDataEntry entry && this.Equals(entry);
-        }
-
-        /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (int)this.Signature * 397;
-            }
         }
 
         /// <inheritdoc/>
         public virtual bool Equals(IccTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -81,5 +62,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
 
             return this.Signature == other.Signature;
         }
+
+        /// <inheritdoc/>
+        public override int GetHashCode() => this.Signature.GetHashCode();
     }
 }

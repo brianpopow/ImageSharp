@@ -1,9 +1,8 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
-using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Formats.Gif;
-using SixLabors.ImageSharp.MetaData;
+using SixLabors.ImageSharp.Metadata;
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests
@@ -16,14 +15,30 @@ namespace SixLabors.ImageSharp.Tests
         [Fact]
         public void ConstructorImageFrameMetaData()
         {
-            ImageFrameMetaData metaData = new ImageFrameMetaData();
-            metaData.FrameDelay = 42;
-            metaData.DisposalMethod = DisposalMethod.RestoreToBackground;
+            const int frameDelay = 42;
+            const int colorTableLength = 128;
+            const GifDisposalMethod disposalMethod = GifDisposalMethod.RestoreToBackground;
 
-            ImageFrameMetaData clone = new ImageFrameMetaData(metaData);
+            var metaData = new ImageFrameMetadata();
+            GifFrameMetadata gifFrameMetaData = metaData.GetFormatMetadata(GifFormat.Instance);
+            gifFrameMetaData.FrameDelay = frameDelay;
+            gifFrameMetaData.ColorTableLength = colorTableLength;
+            gifFrameMetaData.DisposalMethod = disposalMethod;
 
-            Assert.Equal(42, clone.FrameDelay);
-            Assert.Equal(DisposalMethod.RestoreToBackground, clone.DisposalMethod);
+            var clone = new ImageFrameMetadata(metaData);
+            GifFrameMetadata cloneGifFrameMetaData = clone.GetFormatMetadata(GifFormat.Instance);
+
+            Assert.Equal(frameDelay, cloneGifFrameMetaData.FrameDelay);
+            Assert.Equal(colorTableLength, cloneGifFrameMetaData.ColorTableLength);
+            Assert.Equal(disposalMethod, cloneGifFrameMetaData.DisposalMethod);
+        }
+
+        [Fact]
+        public void CloneIsDeep()
+        {
+            var metaData = new ImageFrameMetadata();
+            ImageFrameMetadata clone = metaData.DeepClone();
+            Assert.False(metaData.GetFormatMetadata(GifFormat.Instance).Equals(clone.GetFormatMetadata(GifFormat.Instance)));
         }
     }
 }

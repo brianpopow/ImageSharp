@@ -1,14 +1,16 @@
-﻿using SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder.ColorConverters;
+﻿// Copyright (c) Six Labors and contributors.
+// Licensed under the Apache License, Version 2.0.
+
+using System;
+using System.Numerics;
+
+using BenchmarkDotNet.Attributes;
+
+using SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder.ColorConverters;
+using SixLabors.ImageSharp.Memory;
 
 namespace SixLabors.ImageSharp.Benchmarks.Codecs.Jpeg
 {
-    using System;
-    using System.Numerics;
-
-    using BenchmarkDotNet.Attributes;
-
-    using SixLabors.ImageSharp.Memory;
-
     [Config(typeof(Config.ShortClr))]
     public class YCbCrColorConversion
     {
@@ -39,7 +41,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs.Jpeg
         {
             var values = new JpegColorConverter.ComponentValues(this.input, 0);
 
-            JpegColorConverter.FromYCbCrBasic.ConvertCore(values, this.output);
+            JpegColorConverter.FromYCbCrBasic.ConvertCore(values, this.output, 255F, 128F);
         }
 
         [Benchmark]
@@ -47,7 +49,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs.Jpeg
         {
             var values = new JpegColorConverter.ComponentValues(this.input, 0);
 
-            JpegColorConverter.FromYCbCrSimd.ConvertCore(values, this.output);
+            JpegColorConverter.FromYCbCrSimd.ConvertCore(values, this.output, 255F, 128F);
         }
 
         [Benchmark]
@@ -55,7 +57,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs.Jpeg
         {
             var values = new JpegColorConverter.ComponentValues(this.input, 0);
 
-            JpegColorConverter.FromYCbCrSimdAvx2.ConvertCore(values, this.output);
+            JpegColorConverter.FromYCbCrSimdAvx2.ConvertCore(values, this.output, 255F, 128F);
         }
 
         private static Buffer2D<float>[] CreateRandomValues(
@@ -76,11 +78,10 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs.Jpeg
                 }
 
                 // no need to dispose when buffer is not array owner
-                buffers[i] = Configuration.Default.MemoryManager.Allocate2D<float>(values.Length, 1);
+                buffers[i] = Configuration.Default.MemoryAllocator.Allocate2D<float>(values.Length, 1);
             }
 
             return buffers;
         }
-
     }
 }

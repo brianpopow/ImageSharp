@@ -4,7 +4,7 @@
 using System.Numerics;
 using SixLabors.ImageSharp.Primitives;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Provides methods to write ICC data types
@@ -59,7 +59,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <param name="value">The matrix to write</param>
         /// <param name="isSingle">True if the values are encoded as Single; false if encoded as Fix16</param>
         /// <returns>The number of bytes written</returns>
-        public int WriteMatrix(DenseMatrix<float> value, bool isSingle)
+        public int WriteMatrix(in DenseMatrix<float> value, bool isSingle)
         {
             int count = 0;
             for (int y = 0; y < value.Rows; y++)

@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// An element to process data
@@ -44,7 +44,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public virtual bool Equals(IccMultiProcessElement other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }

@@ -5,7 +5,7 @@ using System;
 using System.Linq;
 using System.Numerics;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// A response curve
@@ -49,7 +49,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccResponseCurve other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -60,36 +60,23 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
             }
 
             return this.CurveType == other.CurveType
-                && this.XyzValues.SequenceEqual(other.XyzValues)
+                && this.XyzValues.AsSpan().SequenceEqual(other.XyzValues)
                 && this.EqualsResponseArray(other);
         }
 
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccResponseCurve other && this.Equals(other);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = (int)this.CurveType;
-                hashCode = (hashCode * 397) ^ (this.XyzValues?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.ResponseArrays?.GetHashCode() ?? 0);
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.CurveType,
+                this.XyzValues,
+                this.ResponseArrays);
         }
 
         private bool EqualsResponseArray(IccResponseCurve other)

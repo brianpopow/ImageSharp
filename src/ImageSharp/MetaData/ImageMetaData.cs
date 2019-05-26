@@ -2,65 +2,74 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System.Collections.Generic;
-using SixLabors.ImageSharp.MetaData.Profiles.Exif;
-using SixLabors.ImageSharp.MetaData.Profiles.Icc;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 
-namespace SixLabors.ImageSharp.MetaData
+namespace SixLabors.ImageSharp.Metadata
 {
     /// <summary>
     /// Encapsulates the metadata of an image.
     /// </summary>
-    public sealed class ImageMetaData
+    public sealed class ImageMetadata : IDeepCloneable<ImageMetadata>
     {
         /// <summary>
         /// The default horizontal resolution value (dots per inch) in x direction.
-        /// <remarks>The default value is 96 dots per inch.</remarks>
+        /// <remarks>The default value is 96 <see cref="PixelResolutionUnit.PixelsPerInch"/>.</remarks>
         /// </summary>
         public const double DefaultHorizontalResolution = 96;
 
         /// <summary>
         /// The default vertical resolution value (dots per inch) in y direction.
-        /// <remarks>The default value is 96 dots per inch.</remarks>
+        /// <remarks>The default value is 96 <see cref="PixelResolutionUnit.PixelsPerInch"/>.</remarks>
         /// </summary>
         public const double DefaultVerticalResolution = 96;
 
+        /// <summary>
+        /// The default pixel resolution units.
+        /// <remarks>The default value is <see cref="PixelResolutionUnit.PixelsPerInch"/>.</remarks>
+        /// </summary>
+        public const PixelResolutionUnit DefaultPixelResolutionUnits = PixelResolutionUnit.PixelsPerInch;
+
+        private readonly Dictionary<IImageFormat, IDeepCloneable> formatMetadata = new Dictionary<IImageFormat, IDeepCloneable>();
         private double horizontalResolution;
         private double verticalResolution;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImageMetaData"/> class.
+        /// Initializes a new instance of the <see cref="ImageMetadata"/> class.
         /// </summary>
-        internal ImageMetaData()
+        internal ImageMetadata()
         {
             this.horizontalResolution = DefaultHorizontalResolution;
             this.verticalResolution = DefaultVerticalResolution;
+            this.ResolutionUnits = DefaultPixelResolutionUnits;
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ImageMetaData"/> class
+        /// Initializes a new instance of the <see cref="ImageMetadata"/> class
         /// by making a copy from other metadata.
         /// </summary>
         /// <param name="other">
-        /// The other <see cref="ImageMetaData"/> to create this instance from.
+        /// The other <see cref="ImageMetadata"/> to create this instance from.
         /// </param>
-        private ImageMetaData(ImageMetaData other)
+        private ImageMetadata(ImageMetadata other)
         {
             this.HorizontalResolution = other.HorizontalResolution;
             this.VerticalResolution = other.VerticalResolution;
-            this.RepeatCount = other.RepeatCount;
+            this.ResolutionUnits = other.ResolutionUnits;
+
+            foreach (KeyValuePair<IImageFormat, IDeepCloneable> meta in other.formatMetadata)
+            {
+                this.formatMetadata.Add(meta.Key, meta.Value.DeepClone());
+            }
 
             foreach (ImageProperty property in other.Properties)
             {
                 this.Properties.Add(property);
             }
 
-            this.ExifProfile = other.ExifProfile != null
-                ? new ExifProfile(other.ExifProfile)
-                : null;
-
-            this.IccProfile = other.IccProfile != null
-                ? new IccProfile(other.IccProfile)
-                : null;
+            this.ExifProfile = other.ExifProfile?.DeepClone();
+            this.IccProfile = other.IccProfile?.DeepClone();
         }
 
         /// <summary>
@@ -100,6 +109,15 @@ namespace SixLabors.ImageSharp.MetaData
         }
 
         /// <summary>
+        /// Gets or sets unit of measure used when reporting resolution.
+        ///  00 : No units; width:height pixel aspect ratio = Ydensity:Xdensity
+        ///  01 : Pixels per inch (2.54 cm)
+        ///  02 : Pixels per centimeter
+        ///  03 : Pixels per meter
+        /// </summary>
+        public PixelResolutionUnit ResolutionUnits { get; set; }
+
+        /// <summary>
         /// Gets or sets the Exif profile.
         /// </summary>
         public ExifProfile ExifProfile { get; set; }
@@ -115,10 +133,28 @@ namespace SixLabors.ImageSharp.MetaData
         public IList<ImageProperty> Properties { get; } = new List<ImageProperty>();
 
         /// <summary>
-        /// Gets or sets the number of times any animation is repeated.
-        /// <remarks>0 means to repeat indefinitely.</remarks>
+        /// Gets the metadata value associated with the specified key.
         /// </summary>
-        public ushort RepeatCount { get; set; }
+        /// <typeparam name="TFormatMetadata">The type of metadata.</typeparam>
+        /// <param name="key">The key of the value to get.</param>
+        /// <returns>
+        /// The <typeparamref name="TFormatMetadata"/>.
+        /// </returns>
+        public TFormatMetadata GetFormatMetadata<TFormatMetadata>(IImageFormat<TFormatMetadata> key)
+             where TFormatMetadata : class, IDeepCloneable
+        {
+            if (this.formatMetadata.TryGetValue(key, out IDeepCloneable meta))
+            {
+                return (TFormatMetadata)meta;
+            }
+
+            TFormatMetadata newMeta = key.CreateDefaultFormatMetadata();
+            this.formatMetadata[key] = newMeta;
+            return newMeta;
+        }
+
+        /// <inheritdoc/>
+        public ImageMetadata DeepClone() => new ImageMetadata(this);
 
         /// <summary>
         /// Looks up a property with the provided name.
@@ -144,20 +180,8 @@ namespace SixLabors.ImageSharp.MetaData
         }
 
         /// <summary>
-        /// Clones this into a new instance
+        /// Synchronizes the profiles with the current metadata.
         /// </summary>
-        /// <returns>The cloned metadata instance</returns>
-        public ImageMetaData Clone()
-        {
-            return new ImageMetaData(this);
-        }
-
-        /// <summary>
-        /// Synchronizes the profiles with the current meta data.
-        /// </summary>
-        internal void SyncProfiles()
-        {
-            this.ExifProfile?.Sync(this);
-        }
+        internal void SyncProfiles() => this.ExifProfile?.Sync(this);
     }
 }

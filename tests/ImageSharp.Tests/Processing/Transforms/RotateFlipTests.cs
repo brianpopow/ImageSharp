@@ -2,8 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing.Transforms;
-using SixLabors.ImageSharp.Processing.Transforms.Processors;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Processing.Processors.Transforms;
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Processing.Transforms
@@ -26,8 +26,8 @@ namespace SixLabors.ImageSharp.Tests.Processing.Transforms
         public void RotateDegreesFloatRotateProcessorWithAnglesSet(RotateMode angle, FlipMode flip, float expectedAngle)
         {
             this.operations.RotateFlip(angle, flip);
-            RotateProcessor<Rgba32> rotateProcessor = this.Verify<RotateProcessor<Rgba32>>(0);
-            FlipProcessor<Rgba32> flipProcessor = this.Verify<FlipProcessor<Rgba32>>(1);
+            RotateProcessor rotateProcessor = this.Verify<RotateProcessor>(0);
+            FlipProcessor flipProcessor = this.Verify<FlipProcessor>(1);
 
             Assert.Equal(expectedAngle, rotateProcessor.Degrees);
             Assert.Equal(flip, flipProcessor.FlipMode);

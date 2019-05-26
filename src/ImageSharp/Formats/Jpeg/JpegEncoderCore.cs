@@ -1,13 +1,18 @@
 ﻿// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
+using System;
+using System.Buffers.Binary;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
-
+using SixLabors.ImageSharp.Common.Helpers;
 using SixLabors.ImageSharp.Formats.Jpeg.Components;
+using SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder;
 using SixLabors.ImageSharp.Formats.Jpeg.Components.Encoder;
-using SixLabors.ImageSharp.MetaData.Profiles.Exif;
-using SixLabors.ImageSharp.MetaData.Profiles.Icc;
+using SixLabors.ImageSharp.Metadata;
+using SixLabors.ImageSharp.Metadata.Profiles.Exif;
+using SixLabors.ImageSharp.Metadata.Profiles.Icc;
 using SixLabors.ImageSharp.PixelFormats;
 
 namespace SixLabors.ImageSharp.Formats.Jpeg
@@ -21,85 +26,6 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// The number of quantization tables.
         /// </summary>
         private const int QuantizationTableCount = 2;
-
-        /// <summary>
-        /// Counts the number of bits needed to hold an integer.
-        /// </summary>
-        private static readonly uint[] BitCountLut =
-            {
-                0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
-                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-                6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
-                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
-                7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
-                8, 8, 8,
-            };
-
-        /// <summary>
-        /// The SOS (Start Of Scan) marker "\xff\xda" followed by 12 bytes:
-        /// - the marker length "\x00\x0c",
-        /// - the number of components "\x03",
-        /// - component 1 uses DC table 0 and AC table 0 "\x01\x00",
-        /// - component 2 uses DC table 1 and AC table 1 "\x02\x11",
-        /// - component 3 uses DC table 1 and AC table 1 "\x03\x11",
-        /// - the bytes "\x00\x3f\x00". Section B.2.3 of the spec says that for
-        /// sequential DCTs, those bytes (8-bit Ss, 8-bit Se, 4-bit Ah, 4-bit Al)
-        /// should be 0x00, 0x3f, 0x00&lt;&lt;4 | 0x00.
-        /// </summary>
-        private static readonly byte[] SosHeaderYCbCr =
-            {
-                JpegConstants.Markers.XFF, JpegConstants.Markers.SOS,
-
-                // Marker
-                0x00, 0x0c,
-
-                // Length (high byte, low byte), must be 6 + 2 * (number of components in scan)
-                0x03, // Number of components in a scan, 3
-                0x01, // Component Id Y
-                0x00, // DC/AC Huffman table
-                0x02, // Component Id Cb
-                0x11, // DC/AC Huffman table
-                0x03, // Component Id Cr
-                0x11, // DC/AC Huffman table
-                0x00, // Ss - Start of spectral selection.
-                0x3f, // Se - End of spectral selection.
-                0x00
-
-                // Ah + Ah (Successive approximation bit position high + low)
-            };
-
-        /// <summary>
-        /// The unscaled quantization tables in zig-zag order. Each
-        /// encoder copies and scales the tables according to its quality parameter.
-        /// The values are derived from section K.1 after converting from natural to
-        /// zig-zag order.
-        /// </summary>
-        private static readonly byte[,] UnscaledQuant =
-            {
-                    {
-                        // Luminance.
-                        16, 11, 12, 14, 12, 10, 16, 14, 13, 14, 18, 17, 16, 19, 24,
-                        40, 26, 24, 22, 22, 24, 49, 35, 37, 29, 40, 58, 51, 61, 60,
-                        57, 51, 56, 55, 64, 72, 92, 78, 64, 68, 87, 69, 55, 56, 80,
-                        109, 81, 87, 95, 98, 103, 104, 103, 62, 77, 113, 121, 112,
-                        100, 120, 92, 101, 103, 99,
-                    },
-                    {
-                        // Chrominance.
-                        17, 18, 18, 24, 21, 24, 47, 26, 26, 47, 99, 66, 56, 66,
-                        99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-                        99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-                        99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
-                        99, 99, 99, 99, 99, 99, 99, 99,
-                    }
-            };
 
         /// <summary>
         /// A scratch buffer to reduce allocations.
@@ -118,19 +44,14 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         private readonly byte[] huffmanBuffer = new byte[179];
 
         /// <summary>
-        /// Gets or sets a value indicating whether the metadata should be ignored when the image is being decoded.
+        /// Gets or sets the subsampling method to use.
         /// </summary>
-        private readonly bool ignoreMetadata;
+        private JpegSubsample? subsample;
 
         /// <summary>
         /// The quality, that will be used to encode the image.
         /// </summary>
-        private readonly int quality;
-
-        /// <summary>
-        /// Gets or sets the subsampling method to use.
-        /// </summary>
-        private readonly JpegSubsample? subsample;
+        private readonly int? quality;
 
         /// <summary>
         /// The accumulated bits to write to the stream.
@@ -163,12 +84,106 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// <param name="options">The options</param>
         public JpegEncoderCore(IJpegEncoderOptions options)
         {
-            // System.Drawing produces identical output for jpegs with a quality parameter of 0 and 1.
-            this.quality = options.Quality.Clamp(1, 100);
-            this.subsample = options.Subsample ?? (this.quality >= 91 ? JpegSubsample.Ratio444 : JpegSubsample.Ratio420);
-
-            this.ignoreMetadata = options.IgnoreMetadata;
+            this.quality = options.Quality;
+            this.subsample = options.Subsample;
         }
+
+        /// <summary>
+        /// Gets the counts the number of bits needed to hold an integer.
+        /// </summary>
+        // The C# compiler emits this as a compile-time constant embedded in the PE file.
+        // This is effectively compiled down to: return new ReadOnlySpan<byte>(&data, length)
+        // More details can be found: https://github.com/dotnet/roslyn/pull/24621
+        private static ReadOnlySpan<byte> BitCountLut => new byte[]
+            {
+                0, 1, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5,
+                5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+                6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6, 6,
+                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7, 7,
+                7, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8,
+                8, 8, 8,
+            };
+
+        /// <summary>
+        /// Gets the SOS (Start Of Scan) marker "\xff\xda" followed by 12 bytes:
+        /// - the marker length "\x00\x0c",
+        /// - the number of components "\x03",
+        /// - component 1 uses DC table 0 and AC table 0 "\x01\x00",
+        /// - component 2 uses DC table 1 and AC table 1 "\x02\x11",
+        /// - component 3 uses DC table 1 and AC table 1 "\x03\x11",
+        /// - the bytes "\x00\x3f\x00". Section B.2.3 of the spec says that for
+        /// sequential DCTs, those bytes (8-bit Ss, 8-bit Se, 4-bit Ah, 4-bit Al)
+        /// should be 0x00, 0x3f, 0x00&lt;&lt;4 | 0x00.
+        /// </summary>
+        // The C# compiler emits this as a compile-time constant embedded in the PE file.
+        // This is effectively compiled down to: return new ReadOnlySpan<byte>(&data, length)
+        // More details can be found: https://github.com/dotnet/roslyn/pull/24621
+        private static ReadOnlySpan<byte> SosHeaderYCbCr => new byte[]
+            {
+                JpegConstants.Markers.XFF, JpegConstants.Markers.SOS,
+
+                // Marker
+                0x00, 0x0c,
+
+                // Length (high byte, low byte), must be 6 + 2 * (number of components in scan)
+                0x03, // Number of components in a scan, 3
+                0x01, // Component Id Y
+                0x00, // DC/AC Huffman table
+                0x02, // Component Id Cb
+                0x11, // DC/AC Huffman table
+                0x03, // Component Id Cr
+                0x11, // DC/AC Huffman table
+                0x00, // Ss - Start of spectral selection.
+                0x3f, // Se - End of spectral selection.
+                0x00
+
+                // Ah + Ah (Successive approximation bit position high + low)
+            };
+
+        /// <summary>
+        /// Gets the unscaled quantization tables in zig-zag order. Each
+        /// encoder copies and scales the tables according to its quality parameter.
+        /// The values are derived from section K.1 after converting from natural to
+        /// zig-zag order.
+        /// </summary>
+        // The C# compiler emits this as a compile-time constant embedded in the PE file.
+        // This is effectively compiled down to: return new ReadOnlySpan<byte>(&data, length)
+        // More details can be found: https://github.com/dotnet/roslyn/pull/24621
+        private static ReadOnlySpan<byte> UnscaledQuant_Luminance => new byte[]
+            {
+                // Luminance.
+                16, 11, 12, 14, 12, 10, 16, 14, 13, 14, 18, 17, 16, 19, 24,
+                40, 26, 24, 22, 22, 24, 49, 35, 37, 29, 40, 58, 51, 61, 60,
+                57, 51, 56, 55, 64, 72, 92, 78, 64, 68, 87, 69, 55, 56, 80,
+                109, 81, 87, 95, 98, 103, 104, 103, 62, 77, 113, 121, 112,
+                100, 120, 92, 101, 103, 99,
+            };
+
+        /// <summary>
+        /// Gets the unscaled quantization tables in zig-zag order. Each
+        /// encoder copies and scales the tables according to its quality parameter.
+        /// The values are derived from section K.1 after converting from natural to
+        /// zig-zag order.
+        /// </summary>
+        // The C# compiler emits this as a compile-time constant embedded in the PE file.
+        // This is effectively compiled down to: return new ReadOnlySpan<byte>(&data, length)
+        // More details can be found: https://github.com/dotnet/roslyn/pull/24621
+        private static ReadOnlySpan<byte> UnscaledQuant_Chrominance => new byte[]
+            {
+                // Chrominance.
+                17, 18, 18, 24, 21, 24, 47, 26, 26, 47, 99, 66, 56, 66,
+                99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+                99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+                99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99, 99,
+                99, 99, 99, 99, 99, 99, 99, 99,
+            };
 
         /// <summary>
         /// Encode writes the image to the jpeg baseline format with the given options.
@@ -189,16 +204,21 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
             }
 
             this.outputStream = stream;
+            ImageMetadata metadata = image.Metadata;
+
+            // System.Drawing produces identical output for jpegs with a quality parameter of 0 and 1.
+            int qlty = (this.quality ?? metadata.GetFormatMetadata(JpegFormat.Instance).Quality).Clamp(1, 100);
+            this.subsample = this.subsample ?? (qlty >= 91 ? JpegSubsample.Ratio444 : JpegSubsample.Ratio420);
 
             // Convert from a quality rating to a scaling factor.
             int scale;
-            if (this.quality < 50)
+            if (qlty < 50)
             {
-                scale = 5000 / this.quality;
+                scale = 5000 / qlty;
             }
             else
             {
-                scale = 200 - (this.quality * 2);
+                scale = 200 - (qlty * 2);
             }
 
             // Initialize the quantization tables.
@@ -209,9 +229,10 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
             int componentCount = 3;
 
             // Write the Start Of Image marker.
-            this.WriteApplicationHeader((short)image.MetaData.HorizontalResolution, (short)image.MetaData.VerticalResolution);
+            this.WriteApplicationHeader(metadata);
 
-            this.WriteProfiles(image);
+            // Write Exif and ICC profiles
+            this.WriteProfiles(metadata);
 
             // Write the quantization tables.
             this.WriteDefineQuantizationTables();
@@ -256,9 +277,12 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// <param name="quant">The quantization table.</param>
         private static void InitQuantizationTable(int i, int scale, ref Block8x8F quant)
         {
+            DebugGuard.MustBeBetweenOrEqualTo(i, 0, 1, nameof(i));
+            var unscaledQuant = (i == 0) ? UnscaledQuant_Luminance : UnscaledQuant_Chrominance;
+
             for (int j = 0; j < Block8x8F.Size; j++)
             {
-                int x = UnscaledQuant[i, j];
+                int x = unscaledQuant[j];
                 x = ((x * scale) + 50) / 100;
                 if (x < 1)
                 {
@@ -354,7 +378,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
             }
             else
             {
-                bt = 8 + BitCountLut[a >> 8];
+                bt = 8 + (uint)BitCountLut[a >> 8];
             }
 
             this.EmitHuff(index, (int)((uint)(runLength << 4) | bt));
@@ -424,11 +448,10 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// <summary>
         /// Writes the application header containing the JFIF identifier plus extra data.
         /// </summary>
-        /// <param name="horizontalResolution">The resolution of the image in the x- direction.</param>
-        /// <param name="verticalResolution">The resolution of the image in the y- direction.</param>
-        private void WriteApplicationHeader(short horizontalResolution, short verticalResolution)
+        /// <param name="meta">The image metadata.</param>
+        private void WriteApplicationHeader(ImageMetadata meta)
         {
-            // Write the start of image marker. Markers are always prefixed with with 0xff.
+            // Write the start of image marker. Markers are always prefixed with 0xff.
             this.buffer[0] = JpegConstants.Markers.XFF;
             this.buffer[1] = JpegConstants.Markers.SOI;
 
@@ -444,13 +467,25 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
             this.buffer[10] = 0x00; // = "JFIF",'\0'
             this.buffer[11] = 0x01; // versionhi
             this.buffer[12] = 0x01; // versionlo
-            this.buffer[13] = 0x01; // xyunits as dpi
 
             // Resolution. Big Endian
-            this.buffer[14] = (byte)(horizontalResolution >> 8);
-            this.buffer[15] = (byte)horizontalResolution;
-            this.buffer[16] = (byte)(verticalResolution >> 8);
-            this.buffer[17] = (byte)verticalResolution;
+            Span<byte> hResolution = this.buffer.AsSpan(14, 2);
+            Span<byte> vResolution = this.buffer.AsSpan(16, 2);
+
+            if (meta.ResolutionUnits == PixelResolutionUnit.PixelsPerMeter)
+            {
+                // Scale down to PPI
+                this.buffer[13] = (byte)PixelResolutionUnit.PixelsPerInch; // xyunits
+                BinaryPrimitives.WriteInt16BigEndian(hResolution, (short)Math.Round(UnitConverter.MeterToInch(meta.HorizontalResolution)));
+                BinaryPrimitives.WriteInt16BigEndian(vResolution, (short)Math.Round(UnitConverter.MeterToInch(meta.VerticalResolution)));
+            }
+            else
+            {
+                // We can simply pass the value.
+                this.buffer[13] = (byte)meta.ResolutionUnits; // xyunits
+                BinaryPrimitives.WriteInt16BigEndian(hResolution, (short)Math.Round(meta.HorizontalResolution));
+                BinaryPrimitives.WriteInt16BigEndian(vResolution, (short)Math.Round(meta.VerticalResolution));
+            }
 
             // No thumbnail
             this.buffer[18] = 0x00; // Thumbnail width
@@ -533,7 +568,14 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         private void WriteDefineHuffmanTables(int componentCount)
         {
             // Table identifiers.
-            byte[] headers = { 0x00, 0x10, 0x01, 0x11 };
+            Span<byte> headers = stackalloc byte[]
+            {
+                0x00,
+                0x10,
+                0x01,
+                0x11
+            };
+
             int markerlen = 2;
             HuffmanSpec[] specs = HuffmanSpec.TheHuffmanSpecs;
 
@@ -543,15 +585,16 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
                 specs = new[] { HuffmanSpec.TheHuffmanSpecs[0], HuffmanSpec.TheHuffmanSpecs[1] };
             }
 
-            foreach (HuffmanSpec s in specs)
+            for (int i = 0; i < specs.Length; i++)
             {
+                ref HuffmanSpec s = ref specs[i];
                 markerlen += 1 + 16 + s.Values.Length;
             }
 
             this.WriteMarkerHeader(JpegConstants.Markers.DHT, markerlen);
             for (int i = 0; i < specs.Length; i++)
             {
-                HuffmanSpec spec = specs[i];
+                ref HuffmanSpec spec = ref specs[i];
                 int len = 0;
 
                 fixed (byte* huffman = this.huffmanBuffer)
@@ -605,27 +648,64 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// </exception>
         private void WriteExifProfile(ExifProfile exifProfile)
         {
-            const int Max = 65533;
-            byte[] data = exifProfile?.ToByteArray();
-            if (data == null || data.Length == 0)
+            if (exifProfile is null)
             {
                 return;
             }
 
-            if (data.Length > Max)
+            const int MaxBytesApp1 = 65533;
+            const int MaxBytesWithExifId = 65527;
+
+            byte[] data = exifProfile?.ToByteArray();
+
+            if (data is null || data.Length == 0)
             {
-                throw new ImageFormatException($"Exif profile size exceeds limit. nameof{Max}");
+                return;
             }
 
-            int length = data.Length + 2;
+            data = ProfileResolver.ExifMarker.Concat(data).ToArray();
 
+            int remaining = data.Length;
+            int bytesToWrite = remaining > MaxBytesApp1 ? MaxBytesApp1 : remaining;
+            int app1Length = bytesToWrite + 2;
+
+            this.WriteApp1Header(app1Length);
+
+            // write the exif data
+            this.outputStream.Write(data, 0, bytesToWrite);
+            remaining -= bytesToWrite;
+
+            // if the exif data exceeds 64K, write it in multiple APP1 Markers
+            for (int idx = MaxBytesApp1; idx < data.Length; idx += MaxBytesWithExifId)
+            {
+                bytesToWrite = remaining > MaxBytesWithExifId ? MaxBytesWithExifId : remaining;
+                app1Length = bytesToWrite + 2 + 6;
+
+                this.WriteApp1Header(app1Length);
+
+                // write Exif00 marker
+                ProfileResolver.ExifMarker.AsSpan().CopyTo(this.buffer.AsSpan());
+                this.outputStream.Write(this.buffer, 0, 6);
+
+                // write the exif data
+                this.outputStream.Write(data, idx, bytesToWrite);
+
+                remaining -= bytesToWrite;
+            }
+        }
+
+        /// <summary>
+        /// Writes the App1 header.
+        /// </summary>
+        /// <param name="app1Length">The length of the data the app1 marker contains</param>
+        private void WriteApp1Header(int app1Length)
+        {
             this.buffer[0] = JpegConstants.Markers.XFF;
             this.buffer[1] = JpegConstants.Markers.APP1; // Application Marker
-            this.buffer[2] = (byte)((length >> 8) & 0xFF);
-            this.buffer[3] = (byte)(length & 0xFF);
+            this.buffer[2] = (byte)((app1Length >> 8) & 0xFF);
+            this.buffer[3] = (byte)(app1Length & 0xFF);
 
             this.outputStream.Write(this.buffer, 0, 4);
-            this.outputStream.Write(data, 0, data.Length);
         }
 
         /// <summary>
@@ -637,8 +717,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// </exception>
         private void WriteIccProfile(IccProfile iccProfile)
         {
-            // Just incase someone set the value to null by accident.
-            if (iccProfile == null)
+            if (iccProfile is null)
             {
                 return;
             }
@@ -649,7 +728,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
 
             byte[] data = iccProfile.ToByteArray();
 
-            if (data == null || data.Length == 0)
+            if (data is null || data.Length == 0)
             {
                 return;
             }
@@ -712,19 +791,17 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// <summary>
         /// Writes the metadata profiles to the image.
         /// </summary>
-        /// <param name="image">The image.</param>
-        /// <typeparam name="TPixel">The pixel format.</typeparam>
-        private void WriteProfiles<TPixel>(Image<TPixel> image)
-            where TPixel : struct, IPixel<TPixel>
+        /// <param name="metadata">The image metadata.</param>
+        private void WriteProfiles(ImageMetadata metadata)
         {
-            if (this.ignoreMetadata)
+            if (metadata is null)
             {
                 return;
             }
 
-            image.MetaData.SyncProfiles();
-            this.WriteExifProfile(image.MetaData.ExifProfile);
-            this.WriteIccProfile(image.MetaData.IccProfile);
+            metadata.SyncProfiles();
+            this.WriteExifProfile(metadata.ExifProfile);
+            this.WriteIccProfile(metadata.IccProfile);
         }
 
         /// <summary>
@@ -736,16 +813,37 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         private void WriteStartOfFrame(int width, int height, int componentCount)
         {
             // "default" to 4:2:0
-            byte[] subsamples = { 0x22, 0x11, 0x11 };
-            byte[] chroma = { 0x00, 0x01, 0x01 };
+            Span<byte> subsamples = stackalloc byte[]
+            {
+                0x22,
+                0x11,
+                0x11
+            };
+
+            Span<byte> chroma = stackalloc byte[]
+            {
+                0x00,
+                0x01,
+                0x01
+            };
 
             switch (this.subsample)
             {
                 case JpegSubsample.Ratio444:
-                    subsamples = new byte[] { 0x11, 0x11, 0x11 };
+                    subsamples = stackalloc byte[]
+                    {
+                        0x11,
+                        0x11,
+                        0x11
+                    };
                     break;
                 case JpegSubsample.Ratio420:
-                    subsamples = new byte[] { 0x22, 0x11, 0x11 };
+                    subsamples = stackalloc byte[]
+                    {
+                        0x22,
+                        0x11,
+                        0x11
+                    };
                     break;
             }
 
@@ -772,11 +870,12 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
             {
                 for (int i = 0; i < componentCount; i++)
                 {
-                    this.buffer[(3 * i) + 6] = (byte)(i + 1);
+                    int i3 = 3 * i;
+                    this.buffer[i3 + 6] = (byte)(i + 1);
 
                     // We use 4:2:0 chroma subsampling by default.
-                    this.buffer[(3 * i) + 7] = subsamples[i];
-                    this.buffer[(3 * i) + 8] = chroma[i];
+                    this.buffer[i3 + 7] = subsamples[i];
+                    this.buffer[i3 + 8] = chroma[i];
                 }
             }
 
@@ -793,7 +892,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         {
             // TODO: Need a JpegScanEncoder<TPixel> class or struct that encapsulates the scan-encoding implementation. (Similar to JpegScanDecoder.)
             // TODO: We should allow grayscale writing.
-            this.outputStream.Write(SosHeaderYCbCr, 0, SosHeaderYCbCr.Length);
+            this.outputStream.Write(SosHeaderYCbCr);
 
             switch (this.subsample)
             {
@@ -893,7 +992,7 @@ namespace SixLabors.ImageSharp.Formats.Jpeg
         /// <param name="length">The marker length.</param>
         private void WriteMarkerHeader(byte marker, int length)
         {
-            // Markers are always prefixed with with 0xff.
+            // Markers are always prefixed with 0xff.
             this.buffer[0] = JpegConstants.Markers.XFF;
             this.buffer[1] = marker;
             this.buffer[2] = (byte)(length >> 8);

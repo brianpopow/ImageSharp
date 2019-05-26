@@ -4,7 +4,7 @@
 using System;
 using System.Globalization;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// The TextDescriptionType contains three types of text description.
@@ -76,7 +76,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <returns>The converted entry</returns>
         public static explicit operator IccMultiLocalizedUnicodeTagDataEntry(IccTextDescriptionTagDataEntry textEntry)
         {
-            if (textEntry == null)
+            if (textEntry is null)
             {
                 return null;
             }
@@ -139,7 +139,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public bool Equals(IccTextDescriptionTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -160,32 +160,19 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
-            return obj is IccTextDescriptionTagDataEntry && this.Equals((IccTextDescriptionTagDataEntry)obj);
+            return obj is IccTextDescriptionTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc />
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (this.Ascii?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.Unicode?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.ScriptCode?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)this.UnicodeLanguageCode;
-                hashCode = (hashCode * 397) ^ this.ScriptCodeCode.GetHashCode();
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Signature,
+                this.Ascii,
+                this.Unicode,
+                this.ScriptCode,
+                this.UnicodeLanguageCode,
+                this.ScriptCodeCode);
         }
     }
 }

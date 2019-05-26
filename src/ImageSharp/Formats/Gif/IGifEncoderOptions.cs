@@ -2,7 +2,7 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System.Text;
-using SixLabors.ImageSharp.Processing.Quantization;
+using SixLabors.ImageSharp.Processing.Processors.Quantization;
 
 namespace SixLabors.ImageSharp.Formats.Gif
 {
@@ -12,11 +12,6 @@ namespace SixLabors.ImageSharp.Formats.Gif
     internal interface IGifEncoderOptions
     {
         /// <summary>
-        /// Gets a value indicating whether the metadata should be ignored when the image is being encoded.
-        /// </summary>
-        bool IgnoreMetadata { get; }
-
-        /// <summary>
         /// Gets the text encoding used to write comments.
         /// </summary>
         Encoding TextEncoding { get; }
@@ -25,5 +20,10 @@ namespace SixLabors.ImageSharp.Formats.Gif
         /// Gets the quantizer used to generate the color palette.
         /// </summary>
         IQuantizer Quantizer { get; }
+
+        /// <summary>
+        /// Gets the color table mode: Global or local.
+        /// </summary>
+        GifColorTableMode? ColorTableMode { get; }
     }
 }

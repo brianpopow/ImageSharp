@@ -6,7 +6,7 @@ using System.IO;
 using BenchmarkDotNet.Attributes;
 using SixLabors.ImageSharp.Formats.Gif;
 using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing.Quantization;
+using SixLabors.ImageSharp.Processing.Processors.Quantization;
 using SixLabors.ImageSharp.Tests;
 using SDImage = System.Drawing.Image;
 
@@ -53,7 +53,7 @@ namespace SixLabors.ImageSharp.Benchmarks.Codecs
         public void GifCore()
         {
             // Try to get as close to System.Drawing's output as possible
-            var options = new GifEncoder { Quantizer = new PaletteQuantizer(false) };
+            var options = new GifEncoder { Quantizer = new WebSafePaletteQuantizer(false) };
             using (var memoryStream = new MemoryStream())
             {
                 this.bmpCore.SaveAsGif(memoryStream, options);

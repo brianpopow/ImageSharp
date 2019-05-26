@@ -4,7 +4,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using SixLabors.ImageSharp.Advanced;
-using SixLabors.ImageSharp.Memory;
+using SixLabors.Memory;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Processing.Processors;
@@ -55,9 +55,9 @@ namespace SixLabors.ImageSharp.Tests
 
             public List<AppliedOperation> Applied { get; } = new List<AppliedOperation>();
 
-            public MemoryManager MemoryManager => this.Source.GetConfiguration().MemoryManager;
+            public MemoryAllocator MemoryAllocator => this.Source.GetConfiguration().MemoryAllocator;
 
-            public Image<TPixel> Apply()
+            public Image<TPixel> GetResultImage()
             {
                 return this.Source;
             }
@@ -67,29 +67,31 @@ namespace SixLabors.ImageSharp.Tests
                 return this.Source.Size();
             }
 
-            public IImageProcessingContext<TPixel> ApplyProcessor(IImageProcessor<TPixel> processor, Rectangle rectangle)
+            public IImageProcessingContext ApplyProcessor(IImageProcessor processor, Rectangle rectangle)
             {
-                this.Applied.Add(new AppliedOperation
-                {
-                    Processor = processor,
-                    Rectangle = rectangle
-                });
+                this.Applied.Add(new AppliedOperation()
+                                     {
+                                         Rectangle = rectangle,
+                                         NonGenericProcessor = processor
+                                     });
                 return this;
             }
 
-            public IImageProcessingContext<TPixel> ApplyProcessor(IImageProcessor<TPixel> processor)
+            public IImageProcessingContext ApplyProcessor(IImageProcessor processor)
             {
-                this.Applied.Add(new AppliedOperation
-                {
-                    Processor = processor
-                });
+                this.Applied.Add(new AppliedOperation()
+                                     {
+                                         NonGenericProcessor = processor
+                                     });
                 return this;
             }
 
             public struct AppliedOperation
             {
                 public Rectangle? Rectangle { get; set; }
-                public IImageProcessor<TPixel> Processor { get; set; }
+                public IImageProcessor<TPixel> GenericProcessor { get; set; }
+                
+                public IImageProcessor NonGenericProcessor { get; set; }
             }
         }
     }

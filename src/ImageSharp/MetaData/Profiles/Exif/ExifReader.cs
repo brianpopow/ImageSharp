@@ -6,31 +6,27 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Text;
-using SixLabors.ImageSharp.IO;
 using SixLabors.ImageSharp.Primitives;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
+namespace SixLabors.ImageSharp.Metadata.Profiles.Exif
 {
     /// <summary>
-    /// Reads and parses EXIF data from a byte array
+    /// Reads and parses EXIF data from a byte array.
     /// </summary>
     internal sealed class ExifReader
     {
-        private readonly List<ExifTag> invalidTags = new List<ExifTag>();
+        private List<ExifTag> invalidTags;
         private readonly byte[] exifData;
         private int position;
-        private Endianness endianness = Endianness.BigEndian;
+        private bool isBigEndian;
         private uint exifOffset;
         private uint gpsOffset;
-        private int startIndex;
 
         public ExifReader(byte[] exifData)
         {
-            DebugGuard.NotNull(exifData, nameof(exifData));
-
-            this.exifData = exifData;
+            this.exifData = exifData ?? throw new ArgumentNullException(nameof(exifData));
         }
 
         private delegate TDataType ConverterMethod<TDataType>(ReadOnlySpan<byte> data);
@@ -38,15 +34,15 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// <summary>
         /// Gets the invalid tags.
         /// </summary>
-        public IReadOnlyList<ExifTag> InvalidTags => this.invalidTags;
+        public IReadOnlyList<ExifTag> InvalidTags => this.invalidTags ?? (IReadOnlyList<ExifTag>)Array.Empty<ExifTag>();
 
         /// <summary>
-        /// Gets the thumbnail length in the byte stream
+        /// Gets the thumbnail length in the byte stream.
         /// </summary>
         public uint ThumbnailLength { get; private set; }
 
         /// <summary>
-        /// Gets the thumbnail offset position in the byte stream
+        /// Gets the thumbnail offset position in the byte stream.
         /// </summary>
         public uint ThumbnailOffset { get; private set; }
 
@@ -76,24 +72,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         {
             var values = new List<ExifValue>();
 
-            if (this.ReadString(4) == "Exif")
-            {
-                if (this.ReadUInt16() != 0)
-                {
-                    return values;
-                }
-
-                this.startIndex = 6;
-            }
-            else
-            {
-                this.position = 0;
-            }
-
-            if (this.ReadString(2) == "II")
-            {
-                this.endianness = Endianness.LittleEndian;
-            }
+            // II == 0x4949
+            this.isBigEndian = !(this.ReadUInt16() == 0x4949);
 
             if (this.ReadUInt16() != 0x002A)
             {
@@ -101,19 +81,19 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             }
 
             uint ifdOffset = this.ReadUInt32();
-            this.AddValues(values, (int)ifdOffset);
+            this.AddValues(values, ifdOffset);
 
             uint thumbnailOffset = this.ReadUInt32();
-            this.GetThumbnail((int)thumbnailOffset);
+            this.GetThumbnail(thumbnailOffset);
 
             if (this.exifOffset != 0)
             {
-                this.AddValues(values, (int)this.exifOffset);
+                this.AddValues(values, this.exifOffset);
             }
 
             if (this.gpsOffset != 0)
             {
-                this.AddValues(values, (int)this.gpsOffset);
+                this.AddValues(values, this.gpsOffset);
             }
 
             return values;
@@ -138,28 +118,16 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
 
         private byte ConvertToByte(ReadOnlySpan<byte> buffer) => buffer[0];
 
-        private unsafe string ConvertToString(ReadOnlySpan<byte> buffer)
+        private string ConvertToString(ReadOnlySpan<byte> buffer)
         {
-#if NETSTANDARD1_1
-            byte[] bytes = buffer.ToArray();
+            int nullCharIndex = buffer.IndexOf((byte)0);
 
-            string result = Encoding.UTF8.GetString(bytes, 0, buffer.Length);
-
-#else
-            string result;
-
-            fixed (byte* pointer = &MemoryMarshal.GetReference(buffer))
+            if (nullCharIndex > -1)
             {
-                result = Encoding.UTF8.GetString(pointer, buffer.Length);
-            }
-#endif
-            int nullCharIndex = result.IndexOf('\0');
-            if (nullCharIndex != -1)
-            {
-                result = result.Substring(0, nullCharIndex);
+                buffer = buffer.Slice(0, nullCharIndex);
             }
 
-            return result;
+            return Encoding.UTF8.GetString(buffer);
         }
 
         /// <summary>
@@ -167,9 +135,14 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
         /// </summary>
         /// <param name="values">The values.</param>
         /// <param name="index">The index.</param>
-        private void AddValues(List<ExifValue> values, int index)
+        private void AddValues(List<ExifValue> values, uint index)
         {
-            this.position = this.startIndex + index;
+            if (index > (uint)this.exifData.Length)
+            {
+                return;
+            }
+
+            this.position = (int)index;
             int count = this.ReadUInt16();
 
             for (int i = 0; i < count; i++)
@@ -217,7 +190,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
 
         private object ConvertValue(ExifDataType dataType, ReadOnlySpan<byte> buffer, uint numberOfComponents)
         {
-            if (buffer == null || buffer.Length == 0)
+            if (buffer.Length == 0)
             {
                 return null;
             }
@@ -353,12 +326,12 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             {
                 int oldIndex = this.position;
 
-                uint newIndex = this.ConvertToUInt32(offsetBuffer) + (uint)this.startIndex;
+                uint newIndex = this.ConvertToUInt32(offsetBuffer);
 
                 // Ensure that the new index does not overrun the data
                 if (newIndex > int.MaxValue)
                 {
-                    this.invalidTags.Add(tag);
+                    this.AddInvalidTag(tag);
 
                     exifValue = default;
 
@@ -369,7 +342,8 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
 
                 if (this.RemainingLength < size)
                 {
-                    this.invalidTags.Add(tag);
+                    this.AddInvalidTag(tag);
+
                     this.position = oldIndex;
 
                     exifValue = default;
@@ -392,13 +366,23 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             return true;
         }
 
-        private TEnum ToEnum<TEnum>(int value, TEnum defaultValue)
-            where TEnum : struct
+        private void AddInvalidTag(ExifTag tag)
         {
-            var enumValue = (TEnum)(object)value;
-            if (Enum.GetValues(typeof(TEnum)).Cast<TEnum>().Any(v => v.Equals(enumValue)))
+            if (this.invalidTags is null)
             {
-                return enumValue;
+                this.invalidTags = new List<ExifTag>();
+            }
+
+            this.invalidTags.Add(tag);
+        }
+
+        [MethodImpl(InliningOptions.ShortMethod)]
+        private TEnum ToEnum<TEnum>(int value, TEnum defaultValue)
+            where TEnum : struct, Enum
+        {
+            if (EnumHelper<TEnum>.IsDefined(value))
+            {
+                return Unsafe.As<int, TEnum>(ref value);
             }
 
             return defaultValue;
@@ -445,7 +429,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             return null;
         }
 
-        private void GetThumbnail(int offset)
+        private void GetThumbnail(uint offset)
         {
             var values = new List<ExifValue>();
             this.AddValues(values, offset);
@@ -454,7 +438,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             {
                 if (value.Tag == ExifTag.JPEGInterchangeFormat && (value.DataType == ExifDataType.Long))
                 {
-                    this.ThumbnailOffset = (uint)value.Value + (uint)this.startIndex;
+                    this.ThumbnailOffset = (uint)value.Value;
                 }
                 else if (value.Tag == ExifTag.JPEGInterchangeFormatLength && value.DataType == ExifDataType.Long)
                 {
@@ -463,18 +447,18 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             }
         }
 
-        private unsafe double ConvertToDouble(ReadOnlySpan<byte> buffer)
+        private double ConvertToDouble(ReadOnlySpan<byte> buffer)
         {
             if (buffer.Length < 8)
             {
                 return default;
             }
 
-            long intValue = this.endianness == Endianness.BigEndian
+            long intValue = this.isBigEndian
                 ? BinaryPrimitives.ReadInt64BigEndian(buffer)
                 : BinaryPrimitives.ReadInt64LittleEndian(buffer);
 
-            return *((double*)&intValue);
+            return Unsafe.As<long, double>(ref intValue);
         }
 
         private uint ConvertToUInt32(ReadOnlySpan<byte> buffer)
@@ -485,7 +469,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return default;
             }
 
-            return this.endianness == Endianness.BigEndian
+            return this.isBigEndian
                 ? BinaryPrimitives.ReadUInt32BigEndian(buffer)
                 : BinaryPrimitives.ReadUInt32LittleEndian(buffer);
         }
@@ -497,23 +481,23 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return default;
             }
 
-            return this.endianness == Endianness.BigEndian
+            return this.isBigEndian
                 ? BinaryPrimitives.ReadUInt16BigEndian(buffer)
                 : BinaryPrimitives.ReadUInt16LittleEndian(buffer);
         }
 
-        private unsafe float ConvertToSingle(ReadOnlySpan<byte> buffer)
+        private float ConvertToSingle(ReadOnlySpan<byte> buffer)
         {
             if (buffer.Length < 4)
             {
                 return default;
             }
 
-            int intValue = this.endianness == Endianness.BigEndian
+            int intValue = this.isBigEndian
                 ? BinaryPrimitives.ReadInt32BigEndian(buffer)
                 : BinaryPrimitives.ReadInt32LittleEndian(buffer);
 
-            return *((float*)&intValue);
+            return Unsafe.As<int, float>(ref intValue);
         }
 
         private Rational ToRational(ReadOnlySpan<byte> buffer)
@@ -529,10 +513,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
             return new Rational(numerator, denominator, false);
         }
 
-        private sbyte ConvertToSignedByte(ReadOnlySpan<byte> buffer)
-        {
-            return unchecked((sbyte)buffer[0]);
-        }
+        private sbyte ConvertToSignedByte(ReadOnlySpan<byte> buffer) => unchecked((sbyte)buffer[0]);
 
         private int ConvertToInt32(ReadOnlySpan<byte> buffer) // SignedLong in Exif Specification
         {
@@ -541,7 +522,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return default;
             }
 
-            return this.endianness == Endianness.BigEndian
+            return this.isBigEndian
                 ? BinaryPrimitives.ReadInt32BigEndian(buffer)
                 : BinaryPrimitives.ReadInt32LittleEndian(buffer);
         }
@@ -566,9 +547,22 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Exif
                 return default;
             }
 
-            return this.endianness == Endianness.BigEndian
+            return this.isBigEndian
                 ? BinaryPrimitives.ReadInt16BigEndian(buffer)
                 : BinaryPrimitives.ReadInt16LittleEndian(buffer);
+        }
+
+        private sealed class EnumHelper<TEnum>
+            where TEnum : struct, Enum
+        {
+            private static readonly int[] Values = Enum.GetValues(typeof(TEnum)).Cast<TEnum>()
+                .Select(e => Convert.ToInt32(e)).OrderBy(e => e).ToArray();
+
+            [MethodImpl(InliningOptions.ShortMethod)]
+            public static bool IsDefined(int value)
+            {
+                return Array.BinarySearch(Values, value) >= 0;
+            }
         }
     }
 }

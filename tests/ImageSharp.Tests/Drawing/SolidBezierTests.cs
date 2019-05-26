@@ -4,8 +4,6 @@
 using System.Numerics;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Drawing;
-using SixLabors.ImageSharp.Processing.Overlays;
 using SixLabors.Shapes;
 using Xunit;
 
@@ -26,19 +24,18 @@ namespace SixLabors.ImageSharp.Tests.Drawing
                         new Vector2(300, 400)
             };
 
-            TPixel blue = NamedColors<TPixel>.Blue;
-            TPixel hotPink = NamedColors<TPixel>.HotPink;
+            Color blue = Color.Blue;
+            Color hotPink = Color.HotPink;
 
             using (Image<TPixel> image = provider.GetImage())
             {
-
-                image.Mutate(x => x
-                    .BackgroundColor(blue)
-                    .Fill(hotPink, new Polygon(new CubicBezierLineSegment(simplePath))));
+                image.Mutate(x => x.BackgroundColor(blue));
+                image.Mutate(x => x.Fill(hotPink, new Polygon(new CubicBezierLineSegment(simplePath))));
                 image.DebugSave(provider);
                 image.CompareToReferenceOutput(provider);
             }
         }
+
 
         [Theory]
         [WithBlankImages(500, 500, PixelTypes.Rgba32)]
@@ -56,9 +53,9 @@ namespace SixLabors.ImageSharp.Tests.Drawing
 
             using (var image = provider.GetImage() as Image<Rgba32>)
             {
-                image.Mutate(x => x
-                    .BackgroundColor(Rgba32.Blue)
-                    .Fill(color, new Polygon(new CubicBezierLineSegment(simplePath))));
+                image.Mutate(x => x.BackgroundColor(Rgba32.Blue));
+                
+                image.Mutate(x => x.Fill(color, new Polygon(new CubicBezierLineSegment(simplePath))));
                 image.DebugSave(provider);
                 image.CompareToReferenceOutput(provider);
             }

@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Color Lookup Table
@@ -116,7 +116,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccClut other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -130,37 +130,24 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 && this.DataType == other.DataType
                 && this.InputChannelCount == other.InputChannelCount
                 && this.OutputChannelCount == other.OutputChannelCount
-                && this.GridPointCount.SequenceEqual(other.GridPointCount);
+                && this.GridPointCount.AsSpan().SequenceEqual(other.GridPointCount);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccClut other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = this.Values?.GetHashCode() ?? 0;
-                hashCode = (hashCode * 397) ^ (int)this.DataType;
-                hashCode = (hashCode * 397) ^ this.InputChannelCount;
-                hashCode = (hashCode * 397) ^ this.OutputChannelCount;
-                hashCode = (hashCode * 397) ^ (this.GridPointCount?.GetHashCode() ?? 0);
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Values,
+                this.DataType,
+                this.InputChannelCount,
+                this.OutputChannelCount,
+                this.GridPointCount);
         }
 
         private bool EqualsValuesArray(IccClut other)
@@ -172,7 +159,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
 
             for (int i = 0; i < this.Values.Length; i++)
             {
-                if (!this.Values[i].SequenceEqual(other.Values[i]))
+                if (!this.Values[i].AsSpan().SequenceEqual(other.Values[i]))
                 {
                     return false;
                 }

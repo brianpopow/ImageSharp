@@ -33,7 +33,7 @@ namespace SixLabors.ImageSharp.Tests
 
         public virtual string SourceFileOrDescription => "";
 
-        public Configuration Configuration { get; set; } = Configuration.Default.ShallowCopy();
+        public Configuration Configuration { get; set; } = Configuration.CreateDefaultInstance();
 
         /// <summary>
         /// Utility instance to provide informations about the test image & manage input/output
@@ -43,6 +43,12 @@ namespace SixLabors.ImageSharp.Tests
         public string TypeName { get; private set; }
         public string MethodName { get; private set; }
         public string OutputSubfolderName { get; private set; }
+
+        public static TestImageProvider<TPixel> BasicTestPattern(int width,
+                                                                 int height,
+                                                                 MethodInfo testMethod = null,
+                                                                 PixelTypes pixelTypeOverride = PixelTypes.Undefined)
+            => new BasicTestPatternProvider(width, height).Init(testMethod, pixelTypeOverride);
 
         public static TestImageProvider<TPixel> TestPattern(
                 int width,
@@ -98,9 +104,9 @@ namespace SixLabors.ImageSharp.Tests
         /// <summary>
         /// Returns an <see cref="Image{TPixel}"/> instance to the test case with the necessary traits.
         /// </summary>
-        public Image<TPixel> GetImage(Action<IImageProcessingContext<TPixel>> operationsToApply)
+        public Image<TPixel> GetImage(Action<IImageProcessingContext> operationsToApply)
         {
-            Image<TPixel> img = GetImage();
+            Image<TPixel> img = this.GetImage();
             img.Mutate(operationsToApply);
             return img;
         }

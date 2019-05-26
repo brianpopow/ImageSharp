@@ -4,7 +4,7 @@
 using System;
 using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This type represents an array of unsigned 64bit integers.
@@ -28,8 +28,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccUInt64ArrayTagDataEntry(ulong[] data, IccProfileTag tagSignature)
             : base(IccTypeSignature.UInt64Array, tagSignature)
         {
-            Guard.NotNull(data, nameof(data));
-            this.Data = data;
+            this.Data = data ?? throw new ArgumentNullException(nameof(data));
         }
 
         /// <summary>
@@ -46,7 +45,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccUInt64ArrayTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -56,32 +55,16 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return true;
             }
 
-            return base.Equals(other) && this.Data.SequenceEqual(other.Data);
+            return base.Equals(other) && this.Data.AsSpan().SequenceEqual(other.Data);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
-            return obj is IccUInt64ArrayTagDataEntry && this.Equals((IccUInt64ArrayTagDataEntry)obj);
+            return obj is IccUInt64ArrayTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.Data?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.Data);
     }
 }

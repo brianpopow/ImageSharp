@@ -9,6 +9,36 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
 {
     public class NormalizedByte4Tests
     {
+        /// <summary>
+        /// Tests the equality operators for equality.
+        /// </summary>
+        [Fact]
+        public void AreEqual()
+        {
+            var color1 = new NormalizedByte4(0.0f, 0.0f, 0.0f, 0.0f);
+            var color2 = new NormalizedByte4(new Vector4(0.0f));
+            var color3 = new NormalizedByte4(new Vector4(1.0f, 0.0f, 1.0f, 1.0f));
+            var color4 = new NormalizedByte4(1.0f, 0.0f, 1.0f, 1.0f);
+
+            Assert.Equal(color1, color2);
+            Assert.Equal(color3, color4);
+        }
+
+        /// <summary>
+        /// Tests the equality operators for inequality.
+        /// </summary>
+        [Fact]
+        public void AreNotEqual()
+        {
+            var color1 = new NormalizedByte4(0.0f, 0.0f, 0.0f, 0.0f);
+            var color2 = new NormalizedByte4(new Vector4(1.0f));
+            var color3 = new NormalizedByte4(new Vector4(1.0f, 0.0f, 0.0f, 1.0f));
+            var color4 = new NormalizedByte4(1.0f, 1.0f, 0.0f, 1.0f);
+
+            Assert.NotEqual(color1, color2);
+            Assert.NotEqual(color3, color4);
+        }
+
         [Fact]
         public void NormalizedByte4_PackedValues()
         {
@@ -46,7 +76,7 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
         }
 
         [Fact]
-        public void NormalizedByte4_PackFromScaledVector4()
+        public void NormalizedByte4_FromScaledVector4()
         {
             // arrange
             var pixel = default(NormalizedByte4);
@@ -54,7 +84,7 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
             uint expected = 0x81818181;
 
             // act 
-            pixel.PackFromScaledVector4(scaled);
+            pixel.FromScaledVector4(scaled);
             uint actual = pixel.PackedValue;
 
             // assert
@@ -62,110 +92,142 @@ namespace SixLabors.ImageSharp.Tests.PixelFormats
         }
 
         [Fact]
-        public void NormalizedByte4_ToRgb24()
+        public void NormalizedByte4_FromArgb32()
         {
             // arrange
-            var short4 = new NormalizedByte4(0.1f, -0.3f, 0.5f, -0.7f);
-            var actual = default(Rgb24);
-            var expected = new Rgb24(141, 90, 192);
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
 
             // act
-            short4.ToRgb24(ref actual);
+            byte4.FromArgb32(new Argb32(255, 255, 255, 255));
 
             // assert
-            Assert.Equal(expected, actual);
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromBgr24()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromBgr24(new Bgr24(byte.MaxValue, byte.MaxValue, byte.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromGrey8()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromGray8(new Gray8(byte.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromGrey16()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromGray16(new Gray16(ushort.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromRgb24()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromRgb24(new Rgb24(byte.MaxValue, byte.MaxValue, byte.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromRgba32()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromRgba32(new Rgba32(255, 255, 255, 255));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromBgra5551()
+        {
+            // arrange
+            var normalizedByte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            normalizedByte4.FromBgra5551(new Bgra5551(1.0f, 1.0f, 1.0f, 1.0f));
+
+            // assert
+            Assert.Equal(expected, normalizedByte4.ToVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromRgb48()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromRgb48(new Rgb48(ushort.MaxValue, ushort.MaxValue, ushort.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
+        }
+
+        [Fact]
+        public void NormalizedByte4_FromRgba64()
+        {
+            // arrange
+            var byte4 = default(NormalizedByte4);
+            Vector4 expected = Vector4.One;
+
+            // act
+            byte4.FromRgba64(new Rgba64(ushort.MaxValue, ushort.MaxValue, ushort.MaxValue, ushort.MaxValue));
+
+            // assert
+            Assert.Equal(expected, byte4.ToScaledVector4());
         }
 
         [Fact]
         public void NormalizedByte4_ToRgba32()
         {
             // arrange
-            var short4 = new NormalizedByte4(0.1f, -0.3f, 0.5f, -0.7f);
+            var byte4 = new NormalizedByte4(byte.MaxValue, byte.MaxValue, byte.MaxValue, byte.MaxValue);
+            var expected = new Rgba32(Vector4.One);
             var actual = default(Rgba32);
-            var expected = new Rgba32(141, 90, 192, 39);
 
             // act
-            short4.ToRgba32(ref actual);
+            byte4.ToRgba32(ref actual);
 
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedByte4_ToBgr24()
-        {
-            // arrange
-            var short4 = new NormalizedByte4(0.1f, -0.3f, 0.5f, -0.7f);
-            var actual = default(Bgr24);
-            var expected = new Bgr24(141, 90, 192);
-
-            // act
-            short4.ToBgr24(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedByte4_ToArgb32()
-        {
-            // arrange
-            var short4 = new NormalizedByte4(0.1f, -0.3f, 0.5f, -0.7f);
-            var actual = default(Argb32);
-            var expected = new Argb32(141, 90, 192, 39);
-
-            // act
-            short4.ToArgb32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedByte4_PackFromRgba32_ToRgba32()
-        {
-            // arrange
-            var short4 = default(NormalizedByte4);
-            var actual = default(Rgba32);
-            var expected = new Rgba32(9, 115, 202, 127);
-
-            // act 
-            short4.PackFromRgba32(new Rgba32(9, 115, 202, 127));
-            short4.ToRgba32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedByte4_PackFromBgra32_ToRgba32()
-        {
-            // arrange
-            var actual = default(Bgra32);
-            var short4 = default(NormalizedByte4);
-            var expected = new Bgra32(9, 115, 202, 127);
-
-            // act 
-            short4.PackFromBgra32(expected);
-            short4.ToBgra32(ref actual);
-
-            // assert
-            Assert.Equal(expected, actual);
-        }
-
-        [Fact]
-        public void NormalizedByte4_PackFromArgb32_ToRgba32()
-        {
-            // arrange
-            var short4 = default(NormalizedByte4);
-            var actual = default(Argb32);
-            var expected = new Argb32(9, 115, 202, 127);
-
-            // act 
-            short4.PackFromArgb32(expected);
-            short4.ToArgb32(ref actual);
-
-            // assert
             Assert.Equal(expected, actual);
         }
     }

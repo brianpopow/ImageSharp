@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This is a simple text structure that contains a text string.
@@ -27,8 +27,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccTextTagDataEntry(string text, IccProfileTag tagSignature)
             : base(IccTypeSignature.Text, tagSignature)
         {
-            Guard.NotNull(text, nameof(text));
-            this.Text = text;
+            this.Text = text ?? throw new ArgumentNullException(nameof(text));
         }
 
         /// <summary>
@@ -45,7 +44,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public bool Equals(IccTextTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -61,26 +60,10 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccTextTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc />
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.Text?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.Text);
     }
 }

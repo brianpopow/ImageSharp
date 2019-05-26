@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.ComponentModel;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -14,7 +13,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
     /// attempted perceptual uniformity
     /// <see href="https://en.wikipedia.org/wiki/CIELUV"/>
     /// </summary>
-    internal readonly struct CieLuv : IColorVector, IEquatable<CieLuv>, IAlmostEquatable<CieLuv, float>
+    public readonly struct CieLuv : IEquatable<CieLuv>
     {
         /// <summary>
         /// D65 standard illuminant.
@@ -23,14 +22,27 @@ namespace SixLabors.ImageSharp.ColorSpaces
         public static readonly CieXyz DefaultWhitePoint = Illuminants.D65;
 
         /// <summary>
-        /// Represents a <see cref="CieLuv"/> that has L, U, and V values set to zero.
+        /// Gets the lightness dimension
+        /// <remarks>A value usually ranging between 0 and 100.</remarks>
         /// </summary>
-        public static readonly CieLuv Empty = default;
+        public readonly float L;
 
         /// <summary>
-        /// The backing vector for SIMD support.
+        /// Gets the blue-yellow chromaticity coordinate of the given whitepoint.
+        /// <remarks>A value usually ranging between -100 and 100.</remarks>
         /// </summary>
-        private readonly Vector3 backingVector;
+        public readonly float U;
+
+        /// <summary>
+        /// Gets the red-green chromaticity coordinate of the given whitepoint.
+        /// <remarks>A value usually ranging between -100 and 100.</remarks>
+        /// </summary>
+        public readonly float V;
+
+        /// <summary>
+        /// Gets the reference white point of this color
+        /// </summary>
+        public readonly CieXyz WhitePoint;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CieLuv"/> struct.
@@ -39,9 +51,9 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// <param name="u">The blue-yellow chromaticity coordinate of the given whitepoint.</param>
         /// <param name="v">The red-green chromaticity coordinate of the given whitepoint.</param>
         /// <remarks>Uses <see cref="DefaultWhitePoint"/> as white point.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLuv(float l, float u, float v)
-            : this(new Vector3(l, u, v), DefaultWhitePoint)
+            : this(l, u, v, DefaultWhitePoint)
         {
         }
 
@@ -52,7 +64,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// <param name="u">The blue-yellow chromaticity coordinate of the given whitepoint.</param>
         /// <param name="v">The red-green chromaticity coordinate of the given whitepoint.</param>
         /// <param name="whitePoint">The reference white point. <see cref="Illuminants"/></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLuv(float l, float u, float v, CieXyz whitePoint)
             : this(new Vector3(l, u, v), whitePoint)
         {
@@ -63,7 +75,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// </summary>
         /// <param name="vector">The vector representing the l, u, v components.</param>
         /// <remarks>Uses <see cref="DefaultWhitePoint"/> as white point.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLuv(Vector3 vector)
             : this(vector, DefaultWhitePoint)
         {
@@ -74,149 +86,55 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// </summary>
         /// <param name="vector">The vector representing the l, u, v components.</param>
         /// <param name="whitePoint">The reference white point. <see cref="Illuminants"/></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLuv(Vector3 vector, CieXyz whitePoint)
-            : this()
         {
-            this.backingVector = vector;
+            // Not clamping as documentation about this space only indicates "usual" ranges
+            this.L = vector.X;
+            this.U = vector.Y;
+            this.V = vector.Z;
             this.WhitePoint = whitePoint;
-        }
-
-        /// <summary>
-        /// Gets the reference white point of this color
-        /// </summary>
-        public CieXyz WhitePoint
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-        }
-
-        /// <summary>
-        /// Gets the lightness dimension
-        /// <remarks>A value usually ranging between 0 and 100.</remarks>
-        /// </summary>
-        public float L
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.X;
-        }
-
-        /// <summary>
-        /// Gets the blue-yellow chromaticity coordinate of the given whitepoint.
-        /// <remarks>A value usually ranging between -100 and 100.</remarks>
-        /// </summary>
-        public float U
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.Y;
-        }
-
-        /// <summary>
-        /// Gets the red-green chromaticity coordinate of the given whitepoint.
-        /// <remarks>A value usually ranging between -100 and 100.</remarks>
-        /// </summary>
-        public float V
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.Z;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether this <see cref="CieLuv"/> is empty.
-        /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool IsEmpty => this.Equals(Empty);
-
-        /// <inheritdoc />
-        public Vector3 Vector
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector;
         }
 
         /// <summary>
         /// Compares two <see cref="CieLuv"/> objects for equality.
         /// </summary>
-        /// <param name="left">
-        /// The <see cref="CieLuv"/> on the left side of the operand.
-        /// </param>
-        /// <param name="right">
-        /// The <see cref="CieLuv"/> on the right side of the operand.
-        /// </param>
+        /// <param name="left">The <see cref="CieLuv"/> on the left side of the operand.</param>
+        /// <param name="right">The <see cref="CieLuv"/> on the right side of the operand.</param>
         /// <returns>
         /// True if the current left is equal to the <paramref name="right"/> parameter; otherwise, false.
         /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(CieLuv left, CieLuv right)
-        {
-            return left.Equals(right);
-        }
+        [MethodImpl(InliningOptions.ShortMethod)]
+        public static bool operator ==(CieLuv left, CieLuv right) => left.Equals(right);
 
         /// <summary>
         /// Compares two <see cref="CieLuv"/> objects for inequality.
         /// </summary>
-        /// <param name="left">
-        /// The <see cref="CieLuv"/> on the left side of the operand.
-        /// </param>
-        /// <param name="right">
-        /// The <see cref="CieLuv"/> on the right side of the operand.
-        /// </param>
+        /// <param name="left">The <see cref="CieLuv"/> on the left side of the operand.</param>
+        /// <param name="right">The <see cref="CieLuv"/> on the right side of the operand.</param>
         /// <returns>
         /// True if the current left is unequal to the <paramref name="right"/> parameter; otherwise, false.
         /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(CieLuv left, CieLuv right)
-        {
-            return !left.Equals(right);
-        }
+        [MethodImpl(InliningOptions.ShortMethod)]
+        public static bool operator !=(CieLuv left, CieLuv right) => !left.Equals(right);
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = this.WhitePoint.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.backingVector.GetHashCode();
-                return hashCode;
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.L, this.U, this.V, this.WhitePoint);
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            if (this.IsEmpty)
-            {
-                return "CieLuv [ Empty ]";
-            }
-
-            return $"CieLuv [ L={this.L:#0.##}, U={this.U:#0.##}, V={this.V:#0.##} ]";
-        }
+        public override string ToString() => FormattableString.Invariant($"CieLuv({this.L:#0.##}, {this.U:#0.##}, {this.V:#0.##})");
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool Equals(object obj)
-        {
-            return obj is CieLuv other && this.Equals(other);
-        }
+        public override bool Equals(object obj) => obj is CieLuv other && this.Equals(other);
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public bool Equals(CieLuv other)
         {
-            return this.backingVector.Equals(other.backingVector)
-                   && this.WhitePoint.Equals(other.WhitePoint);
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AlmostEquals(CieLuv other, float precision)
-        {
-            var result = Vector3.Abs(this.backingVector - other.backingVector);
-
-            return this.WhitePoint.Equals(other.WhitePoint)
-                   && result.X <= precision
-                   && result.Y <= precision
-                   && result.Z <= precision;
+            return this.L.Equals(other.L)
+                && this.U.Equals(other.U)
+                && this.V.Equals(other.V)
+                && this.WhitePoint.Equals(other.WhitePoint);
         }
     }
 }

@@ -2,9 +2,8 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.Linq;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This type represents an array of unsigned shorts.
@@ -28,8 +27,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccUInt16ArrayTagDataEntry(ushort[] data, IccProfileTag tagSignature)
             : base(IccTypeSignature.UInt16Array, tagSignature)
         {
-            Guard.NotNull(data, nameof(data));
-            this.Data = data;
+            this.Data = data ?? throw new ArgumentNullException(nameof(data));
         }
 
         /// <summary>
@@ -46,7 +44,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccUInt16ArrayTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -56,32 +54,16 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
                 return true;
             }
 
-            return base.Equals(other) && this.Data.SequenceEqual(other.Data);
+            return base.Equals(other) && this.Data.AsSpan().SequenceEqual(other.Data);
         }
 
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccUInt16ArrayTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.Data?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.Data);
     }
 }

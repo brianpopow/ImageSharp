@@ -5,15 +5,40 @@ using System.IO;
 using System.Linq;
 using SixLabors.ImageSharp.Formats;
 using SixLabors.ImageSharp.Memory;
+using SixLabors.ImageSharp.Metadata;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.Memory;
 
 namespace SixLabors.ImageSharp
 {
     /// <content>
     /// Adds static methods allowing the decoding of new images.
     /// </content>
-    public static partial class Image
+    public abstract partial class Image
     {
+        /// <summary>
+        /// Creates an <see cref="Image{TPixel}"/> instance backed by an uninitialized memory buffer.
+        /// This is an optimized creation method intended to be used by decoders.
+        /// The image might be filled with memory garbage.
+        /// </summary>
+        /// <typeparam name="TPixel">The pixel type</typeparam>
+        /// <param name="configuration">The <see cref="ImageSharp.Configuration"/></param>
+        /// <param name="width">The width of the image</param>
+        /// <param name="height">The height of the image</param>
+        /// <param name="metadata">The <see cref="ImageMetadata"/></param>
+        /// <returns>The result <see cref="Image{TPixel}"/></returns>
+        internal static Image<TPixel> CreateUninitialized<TPixel>(
+            Configuration configuration,
+            int width,
+            int height,
+            ImageMetadata metadata)
+            where TPixel : struct, IPixel<TPixel>
+        {
+            Buffer2D<TPixel> uninitializedMemoryBuffer =
+                configuration.MemoryAllocator.Allocate2D<TPixel>(width, height);
+            return new Image<TPixel>(configuration, uninitializedMemoryBuffer.MemorySource, width, height, metadata);
+        }
+
         /// <summary>
         /// By reading the header on the provided stream this calculates the images format.
         /// </summary>
@@ -29,12 +54,12 @@ namespace SixLabors.ImageSharp
                 return null;
             }
 
-            using (IManagedByteBuffer buffer = config.MemoryManager.AllocateManagedByteBuffer(maxHeaderSize))
+            using (IManagedByteBuffer buffer = config.MemoryAllocator.AllocateManagedByteBuffer(maxHeaderSize, AllocationOptions.Clean))
             {
                 long startPosition = stream.Position;
                 stream.Read(buffer.Array, 0, maxHeaderSize);
                 stream.Position = startPosition;
-                return config.ImageFormatsManager.FormatDetectors.Select(x => x.DetectFormat(buffer.Span)).LastOrDefault(x => x != null);
+                return config.ImageFormatsManager.FormatDetectors.Select(x => x.DetectFormat(buffer.GetSpan())).LastOrDefault(x => x != null);
             }
         }
 
@@ -48,12 +73,10 @@ namespace SixLabors.ImageSharp
         private static IImageDecoder DiscoverDecoder(Stream stream, Configuration config, out IImageFormat format)
         {
             format = InternalDetectFormat(stream, config);
-            if (format != null)
-            {
-                return config.ImageFormatsManager.FindDecoder(format);
-            }
 
-            return null;
+            return format != null
+                ? config.ImageFormatsManager.FindDecoder(format)
+                : null;
         }
 
 #pragma warning disable SA1008 // Opening parenthesis must be spaced correctly
@@ -71,12 +94,24 @@ namespace SixLabors.ImageSharp
             where TPixel : struct, IPixel<TPixel>
         {
             IImageDecoder decoder = DiscoverDecoder(stream, config, out IImageFormat format);
-            if (decoder == null)
+            if (decoder is null)
             {
                 return (null, null);
             }
 
             Image<TPixel> img = decoder.Decode<TPixel>(config, stream);
+            return (img, format);
+        }
+
+        private static (Image img, IImageFormat format) Decode(Stream stream, Configuration config)
+        {
+            IImageDecoder decoder = DiscoverDecoder(stream, config, out IImageFormat format);
+            if (decoder is null)
+            {
+                return (null, null);
+            }
+
+            Image img = decoder.Decode(config, stream);
             return (img, format);
         }
 

@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Typically this type is used for registered tags that can
@@ -28,12 +28,11 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         public IccSignatureTagDataEntry(string signatureData, IccProfileTag tagSignature)
             : base(IccTypeSignature.Signature, tagSignature)
         {
-            Guard.NotNull(signatureData, nameof(signatureData));
-            this.SignatureData = signatureData;
+            this.SignatureData = signatureData ?? throw new ArgumentNullException(nameof(signatureData));
         }
 
         /// <summary>
-        /// Gets the Signature
+        /// Gets the signature data
         /// </summary>
         public string SignatureData { get; }
 
@@ -46,7 +45,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public bool Equals(IccSignatureTagDataEntry other)
         {
-            if (ReferenceEquals(null, other))
+            if (other is null)
             {
                 return false;
             }
@@ -62,26 +61,10 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc />
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj))
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccSignatureTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc />
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (base.GetHashCode() * 397) ^ (this.SignatureData?.GetHashCode() ?? 0);
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.Signature, this.SignatureData);
     }
 }

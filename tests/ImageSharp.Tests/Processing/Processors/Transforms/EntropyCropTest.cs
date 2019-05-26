@@ -3,31 +3,28 @@
 
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
-using SixLabors.ImageSharp.Processing.Transforms;
-
 using Xunit;
 
 namespace SixLabors.ImageSharp.Tests.Processing.Processors.Transforms
 {
-    public class EntropyCropTest : FileTestBase
+    [GroupOutput("Transforms")]
+    public class EntropyCropTest
     {
-        public static readonly TheoryData<float> EntropyCropValues
-        = new TheoryData<float>
-        {
-            .25F,
-            .75F
-        };
+        public static readonly TheoryData<float> EntropyCropValues = new TheoryData<float> { .25F, .75F };
+
+        public static readonly string[] InputImages =
+            {
+                TestImages.Png.Ducky,
+                TestImages.Jpeg.Baseline.Jpeg400,
+                TestImages.Jpeg.Baseline.MultiScanBaselineCMYK
+            };
 
         [Theory]
-        [WithFileCollection(nameof(DefaultFiles), nameof(EntropyCropValues), DefaultPixelType)]
-        public void ImageShouldEntropyCrop<TPixel>(TestImageProvider<TPixel> provider, float value)
+        [WithFileCollection(nameof(InputImages), nameof(EntropyCropValues), PixelTypes.Rgba32)]
+        public void EntropyCrop<TPixel>(TestImageProvider<TPixel> provider, float value)
             where TPixel : struct, IPixel<TPixel>
         {
-            using (Image<TPixel> image = provider.GetImage())
-            {
-                image.Mutate(x => x.EntropyCrop(value));
-                image.DebugSave(provider, value);
-            }
+            provider.RunValidatingProcessorTest(x => x.EntropyCrop(value), value, appendPixelTypeToFileName: false);
         }
     }
 }

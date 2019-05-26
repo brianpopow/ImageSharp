@@ -3,18 +3,14 @@
 
 using System;
 using System.IO;
-using System.Text;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// Provides methods to write ICC data types
     /// </summary>
     internal sealed partial class IccDataWriter : IDisposable
     {
-        private static readonly bool IsLittleEndian = BitConverter.IsLittleEndian;
-        private static readonly Encoding AsciiEncoding = Encoding.GetEncoding("ASCII");
-
         /// <summary>
         /// The underlying stream where the data is written to
         /// </summary>
@@ -181,7 +177,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <returns>The number of bytes written</returns>
         private unsafe int WriteBytes(byte* data, int length)
         {
-            if (IsLittleEndian)
+            if (BitConverter.IsLittleEndian)
             {
                 for (int i = length - 1; i >= 0; i--)
                 {

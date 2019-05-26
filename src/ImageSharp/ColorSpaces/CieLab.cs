@@ -2,7 +2,6 @@
 // Licensed under the Apache License, Version 2.0.
 
 using System;
-using System.ComponentModel;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 
@@ -12,7 +11,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
     /// Represents a CIE L*a*b* 1976 color.
     /// <see href="https://en.wikipedia.org/wiki/Lab_color_space"/>
     /// </summary>
-    internal readonly struct CieLab : IColorVector, IEquatable<CieLab>, IAlmostEquatable<CieLab, float>
+    public readonly struct CieLab : IEquatable<CieLab>
     {
         /// <summary>
         /// D50 standard illuminant.
@@ -21,14 +20,27 @@ namespace SixLabors.ImageSharp.ColorSpaces
         public static readonly CieXyz DefaultWhitePoint = Illuminants.D50;
 
         /// <summary>
-        /// Represents a <see cref="CieLab"/> that has L, A, B values set to zero.
+        /// Gets the lightness dimension.
+        /// <remarks>A value usually ranging between 0 (black), 100 (diffuse white) or higher (specular white).</remarks>
         /// </summary>
-        public static readonly CieLab Empty = default;
+        public readonly float L;
 
         /// <summary>
-        /// The backing vector for SIMD support.
+        /// Gets the a color component.
+        /// <remarks>A value usually ranging from -100 to 100. Negative is green, positive magenta.</remarks>
         /// </summary>
-        private readonly Vector3 backingVector;
+        public readonly float A;
+
+        /// <summary>
+        /// Gets the b color component.
+        /// <remarks>A value usually ranging from -100 to 100. Negative is blue, positive is yellow</remarks>
+        /// </summary>
+        public readonly float B;
+
+        /// <summary>
+        /// Gets the reference white point of this color
+        /// </summary>
+        public readonly CieXyz WhitePoint;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CieLab"/> struct.
@@ -37,9 +49,9 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// <param name="a">The a (green - magenta) component.</param>
         /// <param name="b">The b (blue - yellow) component.</param>
         /// <remarks>Uses <see cref="DefaultWhitePoint"/> as white point.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLab(float l, float a, float b)
-            : this(new Vector3(l, a, b), DefaultWhitePoint)
+            : this(l, a, b, DefaultWhitePoint)
         {
         }
 
@@ -50,7 +62,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// <param name="a">The a (green - magenta) component.</param>
         /// <param name="b">The b (blue - yellow) component.</param>
         /// <param name="whitePoint">The reference white point. <see cref="Illuminants"/></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLab(float l, float a, float b, CieXyz whitePoint)
             : this(new Vector3(l, a, b), whitePoint)
         {
@@ -61,7 +73,7 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// </summary>
         /// <param name="vector">The vector representing the l, a, b components.</param>
         /// <remarks>Uses <see cref="DefaultWhitePoint"/> as white point.</remarks>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLab(Vector3 vector)
             : this(vector, DefaultWhitePoint)
         {
@@ -72,154 +84,56 @@ namespace SixLabors.ImageSharp.ColorSpaces
         /// </summary>
         /// <param name="vector">The vector representing the l, a, b components.</param>
         /// <param name="whitePoint">The reference white point. <see cref="Illuminants"/></param>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public CieLab(Vector3 vector, CieXyz whitePoint)
             : this()
         {
-            this.backingVector = vector;
+            // Not clamping as documentation about this space only indicates "usual" ranges
+            this.L = vector.X;
+            this.A = vector.Y;
+            this.B = vector.Z;
             this.WhitePoint = whitePoint;
-        }
-
-        /// <summary>
-        /// Gets the reference white point of this color
-        /// </summary>
-        public CieXyz WhitePoint
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get;
-        }
-
-        /// <summary>
-        /// Gets the lightness dimension.
-        /// <remarks>A value ranging between 0 (black), 100 (diffuse white) or higher (specular white).</remarks>
-        /// </summary>
-        public float L
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.X;
-        }
-
-        /// <summary>
-        /// Gets the a color component.
-        /// <remarks>A value ranging from -100 to 100. Negative is green, positive magenta.</remarks>
-        /// </summary>
-        public float A
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.Y;
-        }
-
-        /// <summary>
-        /// Gets the b color component.
-        /// <remarks>A value ranging from -100 to 100. Negative is blue, positive is yellow</remarks>
-        /// </summary>
-        public float B
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector.Z;
-        }
-
-        /// <summary>
-        /// Gets a value indicating whether this <see cref="CieLab"/> is empty.
-        /// </summary>
-        [EditorBrowsable(EditorBrowsableState.Never)]
-        public bool IsEmpty => this.Equals(Empty);
-
-        /// <inheritdoc />
-        public Vector3 Vector
-        {
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => this.backingVector;
         }
 
         /// <summary>
         /// Compares two <see cref="CieLab"/> objects for equality.
         /// </summary>
-        /// <param name="left">
-        /// The <see cref="CieLab"/> on the left side of the operand.
-        /// </param>
-        /// <param name="right">
-        /// The <see cref="CieLab"/> on the right side of the operand.
-        /// </param>
+        /// <param name="left">The <see cref="CieLab"/> on the left side of the operand.</param>
+        /// <param name="right">The <see cref="CieLab"/> on the right side of the operand.</param>
         /// <returns>
         /// True if the current left is equal to the <paramref name="right"/> parameter; otherwise, false.
         /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator ==(CieLab left, CieLab right)
-        {
-            return left.Equals(right);
-        }
+        [MethodImpl(InliningOptions.ShortMethod)]
+        public static bool operator ==(CieLab left, CieLab right) => left.Equals(right);
 
         /// <summary>
         /// Compares two <see cref="CieLab"/> objects for inequality
         /// </summary>
-        /// <param name="left">
-        /// The <see cref="CieLab"/> on the left side of the operand.
-        /// </param>
-        /// <param name="right">
-        /// The <see cref="CieLab"/> on the right side of the operand.
-        /// </param>
+        /// <param name="left">The <see cref="CieLab"/> on the left side of the operand.</param>
+        /// <param name="right">The <see cref="CieLab"/> on the right side of the operand.</param>
         /// <returns>
         /// True if the current left is unequal to the <paramref name="right"/> parameter; otherwise, false.
         /// </returns>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static bool operator !=(CieLab left, CieLab right)
-        {
-            return !left.Equals(right);
-        }
+        [MethodImpl(InliningOptions.ShortMethod)]
+        public static bool operator !=(CieLab left, CieLab right) => !left.Equals(right);
 
         /// <inheritdoc/>
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                int hashCode = this.WhitePoint.GetHashCode();
-                hashCode = (hashCode * 397) ^ this.backingVector.GetHashCode();
-                return hashCode;
-            }
-        }
+        public override int GetHashCode() => HashCode.Combine(this.L, this.A, this.B, this.WhitePoint);
 
         /// <inheritdoc/>
-        public override string ToString()
-        {
-            if (this.IsEmpty)
-            {
-                return "CieLab [Empty]";
-            }
-
-            return $"CieLab [ L={this.L:#0.##}, A={this.A:#0.##}, B={this.B:#0.##}]";
-        }
+        public override string ToString() => FormattableString.Invariant($"CieLab({this.L:#0.##}, {this.A:#0.##}, {this.B:#0.##})");
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public override bool Equals(object obj)
-        {
-            if (obj is CieLab)
-            {
-                return this.Equals((CieLab)obj);
-            }
-
-            return false;
-        }
+        public override bool Equals(object obj) => obj is CieLab other && this.Equals(other);
 
         /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(InliningOptions.ShortMethod)]
         public bool Equals(CieLab other)
         {
-            return this.backingVector.Equals(other.backingVector)
+            return this.L.Equals(other.L)
+                && this.A.Equals(other.A)
+                && this.B.Equals(other.B)
                 && this.WhitePoint.Equals(other.WhitePoint);
-        }
-
-        /// <inheritdoc/>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool AlmostEquals(CieLab other, float precision)
-        {
-            var result = Vector3.Abs(this.backingVector - other.backingVector);
-
-            return this.WhitePoint.Equals(other.WhitePoint)
-                && result.X <= precision
-                && result.Y <= precision
-                && result.Z <= precision;
         }
     }
 }

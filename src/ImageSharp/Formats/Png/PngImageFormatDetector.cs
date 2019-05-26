@@ -17,12 +17,7 @@ namespace SixLabors.ImageSharp.Formats.Png
         /// <inheritdoc/>
         public IImageFormat DetectFormat(ReadOnlySpan<byte> header)
         {
-            if (this.IsSupportedFileFormat(header))
-            {
-                return ImageFormats.Png;
-            }
-
-            return null;
+            return this.IsSupportedFileFormat(header) ? PngFormat.Instance : null;
         }
 
         private bool IsSupportedFileFormat(ReadOnlySpan<byte> header)

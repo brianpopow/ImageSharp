@@ -3,7 +3,7 @@
 
 using System;
 
-namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
+namespace SixLabors.ImageSharp.Metadata.Profiles.Icc
 {
     /// <summary>
     /// This type contains the PostScript product name to which this profile
@@ -94,7 +94,7 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public bool Equals(IccCrdInfoTagDataEntry other)
         {
-            if (other == null)
+            if (other is null)
             {
                 return false;
             }
@@ -115,32 +115,19 @@ namespace SixLabors.ImageSharp.MetaData.Profiles.Icc
         /// <inheritdoc/>
         public override bool Equals(object obj)
         {
-            if (obj == null)
-            {
-                return false;
-            }
-
-            if (ReferenceEquals(this, obj))
-            {
-                return true;
-            }
-
             return obj is IccCrdInfoTagDataEntry other && this.Equals(other);
         }
 
         /// <inheritdoc/>
         public override int GetHashCode()
         {
-            unchecked
-            {
-                int hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (this.PostScriptProductName?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.RenderingIntent0Crd?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.RenderingIntent1Crd?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.RenderingIntent2Crd?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (this.RenderingIntent3Crd?.GetHashCode() ?? 0);
-                return hashCode;
-            }
+            return HashCode.Combine(
+                this.Signature,
+                this.PostScriptProductName,
+                this.RenderingIntent0Crd,
+                this.RenderingIntent1Crd,
+                this.RenderingIntent2Crd,
+                this.RenderingIntent3Crd);
         }
     }
 }
