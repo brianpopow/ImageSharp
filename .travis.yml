@@ -16,7 +16,7 @@ matrix:
 branches:
   only:
     - master
-    - feature
+    - feature/unitTestsWithDocker
     - coverity_scan
 
 script:
