@@ -3,7 +3,7 @@ mono: none
 solution: ImageSharp.sln
 
 env:
-  - ARCH=x64
+  - ARCH=x32
   - ARCH=arm
 
 matrix:
