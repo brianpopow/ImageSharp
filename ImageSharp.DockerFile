@@ -1,7 +1,4 @@
-# FROM microsoft/dotnet:2.1.300-rc1-sdk
-FROM microsoft/dotnet:2.1.301-sdk
-# FROM microsoft/dotnet-nightly:2.1.300-sdk
-# FROM microsoft/dotnet-nightly:latest
+FROM mcr.microsoft.com/dotnet/core/sdk:2.1.700-bionic
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
@@ -13,8 +10,4 @@ RUN apt-get install nano
 COPY . /app/
 WORKDIR /app/
 RUN dotnet restore
-CMD ["dotnet", "test", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.0"]
-# CMD ["dotnet", "test", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Debug", "-f", "netcoreapp2.0"]
-# CMD ["dotnet", "test", "--filter", "FullyQualifiedName=SixLabors.ImageSharp.Tests.ImageCloneTests.CloneAs_ToBgr24", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.0"]
-# CMD ["dotnet", "test", "--filter", "FullyQualifiedName=SixLabors.ImageSharp.Tests.ImageCloneTests.CloneAs_ToRgb24", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.0"]
-# CMD ["dotnet", "test", "--filter", "FullyQualifiedName=SixLabors.ImageSharp.Tests.Colors.PackedPixelTests.NormalizedByte4", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.0"]
+CMD ["dotnet", "test", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.1"]
