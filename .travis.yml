@@ -2,6 +2,10 @@ language: csharp
 mono: none
 solution: ImageSharp.sln
 
+env:
+  - ARCH=x64
+  - ARCH=arm
+
 matrix:
   include:
     - os: linux # Ubuntu 16.04
@@ -14,7 +18,7 @@ services:
 branches:
   only:
     - master
-    - feature/unitTestsWithDocker
+    - feature/unitTestsWithDockerArm
     - coverity_scan
 
 script:
