@@ -9,6 +9,9 @@ matrix:
       dotnet: 2.1.603
       mono: latest
 
+services:
+  - docker
+
 branches:
   only:
     - master
@@ -17,5 +20,5 @@ branches:
 
 script:
   - git submodule -q update --init
-  - dotnet restore
-  - dotnet test tests/ImageSharp.Tests/ImageSharp.Tests.csproj -c Release -f "netcoreapp2.1"
+  - docker-compose build
+  - docker-compose up
