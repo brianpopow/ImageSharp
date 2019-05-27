@@ -2,9 +2,9 @@ language: csharp
 mono: none
 solution: ImageSharp.sln
 
-env:
-  - ARCH=x32
-  - ARCH=arm
+#env:
+#  - ARCH=x32
+#  - ARCH=arm
 
 matrix:
   include:
