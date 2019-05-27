@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:3.0.100-preview5-buster-arm64v8
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.300-bionic
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
