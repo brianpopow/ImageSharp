@@ -6,8 +6,6 @@ matrix:
     - os: linux # Ubuntu 16.04
       dist: xenial
       sudo: required
-      dotnet: 2.1.603
-      mono: latest
 
 services:
   - docker
@@ -19,6 +17,5 @@ branches:
     - coverity_scan
 
 script:
-  - git submodule -q update --init
   - docker-compose build
   - docker-compose up
