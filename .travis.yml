@@ -2,9 +2,9 @@ language: csharp
 mono: none
 solution: ImageSharp.sln
 
-#env:
-#  - ARCH=x32
-#  - ARCH=arm
+env:
+  - ARCH=x32
+  - ARCH=arm
 
 matrix:
   include:
@@ -22,5 +22,7 @@ branches:
     - coverity_scan
 
 script:
+  # setup QEMU
+  - docker run --rm --privileged multiarch/qemu-user-static:register --reset
   - docker-compose build
   - docker-compose up
