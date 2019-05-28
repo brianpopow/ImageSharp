@@ -2,16 +2,12 @@ language: csharp
 mono: none
 solution: ImageSharp.sln
 
-env:
-  - ARCH=x32
-  - ARCH=arm
-
 matrix:
   include:
-    - os: linux-aarch64
+    - os: linux
       dist: xenial
       sudo: required
-
+ 
 services:
   - docker
 
