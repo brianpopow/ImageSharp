@@ -12,7 +12,5 @@ RUN apt-get install nano
 
 COPY . /app/
 WORKDIR /app/
-RUN dotnet build
-RUN dotnet test tests/ImageSharp.Tests/ImageSharp.Tests.csproj -c Release -f netcoreapp2.1
-# RUN dotnet restore
+RUN dotnet restore
 CMD ["dotnet", "test", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.1"]
