@@ -3,7 +3,7 @@ MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
 
-RUN uname -a
+# RUN uname -a
 
 RUN apt-get update
 RUN apt-get -y install libgdiplus libgif-dev autoconf libtool automake build-essential gettext libglib2.0-dev libcairo2-dev libtiff-dev libexif-dev
