@@ -20,5 +20,5 @@ branches:
 script:
   # setup QEMU
   - docker run --rm --privileged multiarch/qemu-user-static:register --reset
-  - docker build -t arm_test -f ImageSharp.DockerFile .
-  - docker run -t arm_test 
+  - docker-compose build
+  - docker-compose up
