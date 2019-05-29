@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:2.1.700-bionic
+FROM mcr.microsoft.com/dotnet/core/sdk:3.0.100-preview5-bionic-arm32v7
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
@@ -11,5 +11,7 @@ RUN apt-get install nano
 
 COPY . /app/
 WORKDIR /app/
-RUN dotnet restore
+RUN dotnet build
+RUN dotnet test tests/ImageSharp.Tests/ImageSharp.Tests.csproj -c Release -f netcoreapp2.1
+# RUN dotnet restore
 CMD ["dotnet", "test", "tests/ImageSharp.Tests/ImageSharp.Tests.csproj", "-c", "Release", "-f", "netcoreapp2.1"]
