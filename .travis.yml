@@ -19,6 +19,6 @@ branches:
 
 script:
   # setup QEMU
-  # - docker run --rm --privileged multiarch/qemu-user-static:register --reset
+  - docker run --rm --privileged hypriot/qemu-register
   - docker-compose build
   - docker-compose up
