@@ -1,0 +1,14 @@
+variables:
+  PROJECT_NAME: "ImageSharp"
+before_script:
+  - echo "starting test for %PROJECT_NAME%"
+stages:
+  - test
+test:
+  stage: test
+  script:
+  - git submodule -q update --init
+  - dotnet restore
+  - dotnet test tests/ImageSharp.Tests/ImageSharp.Tests.csproj -c Release -f "netcoreapp2.1"
+  artifacts:
+    untracked: true
