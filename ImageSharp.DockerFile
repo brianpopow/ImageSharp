@@ -1,5 +1,4 @@
-# FROM mcr.microsoft.com/dotnet/core/sdk:3.0.100-preview5-bionic-arm32v7
-FROM mcr.microsoft.com/dotnet/core/sdk:2.1.700-bionic
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.300-bionic-arm32v7
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
