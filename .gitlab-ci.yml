@@ -6,6 +6,7 @@ stages:
   - test
 test:
   stage: test
+  image: mcr.microsoft.com/dotnet/core/sdk:2.2.300-bionic
   script:
   - git submodule -q update --init
   - dotnet restore
