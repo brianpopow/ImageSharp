@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:2.1.700-bionic
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.401-bionic
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
