@@ -25,7 +25,7 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
     /// The original code has been adapted from <see href="http://www.realtimerendering.com/resources/GraphicsGems/gemsiii/filter_rcg.c"/>.
     /// </remarks>
     /// <typeparam name="TPixel">The pixel format.</typeparam>
-    internal class ResizeProcessor<TPixel> : TransformProcessorBase<TPixel>
+    internal class ResizeProcessor<TPixel> : TransformProcessor<TPixel>
         where TPixel : struct, IPixel<TPixel>
     {
         // The following fields are not immutable but are optionally created on demand.
@@ -68,7 +68,12 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
         protected override Image<TPixel> CreateDestination(Image<TPixel> source, Rectangle sourceRectangle)
         {
             // We will always be creating the clone even for mutate because we may need to resize the canvas
-            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select(x => new ImageFrame<TPixel>(source.GetConfiguration(), this.Width, this.Height, x.Metadata.DeepClone()));
+            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select<ImageFrame<TPixel>, ImageFrame<TPixel>>(
+                x => new ImageFrame<TPixel>(
+                    source.GetConfiguration(),
+                    this.Width,
+                    this.Height,
+                    x.Metadata.DeepClone()));
 
             // Use the overload to prevent an extra frame being added
             return new Image<TPixel>(source.GetConfiguration(), source.Metadata.DeepClone(), frames);

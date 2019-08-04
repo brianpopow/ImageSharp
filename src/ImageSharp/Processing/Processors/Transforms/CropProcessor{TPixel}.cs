@@ -16,7 +16,7 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
     /// Provides methods to allow the cropping of an image.
     /// </summary>
     /// <typeparam name="TPixel">The pixel format.</typeparam>
-    internal class CropProcessor<TPixel> : TransformProcessorBase<TPixel>
+    internal class CropProcessor<TPixel> : TransformProcessor<TPixel>
         where TPixel : struct, IPixel<TPixel>
     {
         private readonly CropProcessor definition;
@@ -36,7 +36,12 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
         protected override Image<TPixel> CreateDestination(Image<TPixel> source, Rectangle sourceRectangle)
         {
             // We will always be creating the clone even for mutate because we may need to resize the canvas
-            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select(x => new ImageFrame<TPixel>(source.GetConfiguration(), this.CropRectangle.Width, this.CropRectangle.Height, x.Metadata.DeepClone()));
+            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select<ImageFrame<TPixel>, ImageFrame<TPixel>>(
+                x => new ImageFrame<TPixel>(
+                    source.GetConfiguration(),
+                    this.CropRectangle.Width,
+                    this.CropRectangle.Height,
+                    x.Metadata.DeepClone()));
 
             // Use the overload to prevent an extra frame being added
             return new Image<TPixel>(source.GetConfiguration(), source.Metadata.DeepClone(), frames);

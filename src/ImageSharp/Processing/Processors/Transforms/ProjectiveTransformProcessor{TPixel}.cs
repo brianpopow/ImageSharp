@@ -17,7 +17,7 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
     /// Provides the base methods to perform non-affine transforms on an image.
     /// </summary>
     /// <typeparam name="TPixel">The pixel format.</typeparam>
-    internal class ProjectiveTransformProcessor<TPixel> : TransformProcessorBase<TPixel>
+    internal class ProjectiveTransformProcessor<TPixel> : TransformProcessor<TPixel>
         where TPixel : struct, IPixel<TPixel>
     {
         private readonly ProjectiveTransformProcessor definition;
@@ -33,7 +33,7 @@ namespace SixLabors.ImageSharp.Processing.Processors.Transforms
         protected override Image<TPixel> CreateDestination(Image<TPixel> source, Rectangle sourceRectangle)
         {
             // We will always be creating the clone even for mutate because we may need to resize the canvas
-            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select(
+            IEnumerable<ImageFrame<TPixel>> frames = source.Frames.Select<ImageFrame<TPixel>, ImageFrame<TPixel>>(
                 x => new ImageFrame<TPixel>(
                     source.GetConfiguration(),
                     this.TargetDimensions.Width,

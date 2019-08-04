@@ -1,13 +1,13 @@
-﻿using System;
+using System;
 using System.IO;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 
-namespace DockerSandbox
+namespace ImageSharp.DockerSandbox
 {
     class Program
     {
-        static void Main(string[] args)
+        public static void Main(string[] args)
         {
             var carImage = Image.Load<Rgba32>(@"Car.jpg");
             using (var fs = new FileStream("/app/docker_output/car_output.jpg", FileMode.Create))

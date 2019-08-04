@@ -222,6 +222,14 @@ namespace SixLabors.ImageSharp.PixelFormats
                     dp.FromBgra32(sp);
                 }
             }
+            /// <inheritdoc />
+            internal override void From<TSourcePixel>(
+                Configuration configuration,
+                ReadOnlySpan<TSourcePixel> sourcePixels,
+                Span<Bgra32> destinationPixels)
+            {
+                PixelOperations<TSourcePixel>.Instance.ToBgra32(configuration, sourcePixels, destinationPixels);
+            }
         }
     }
 }

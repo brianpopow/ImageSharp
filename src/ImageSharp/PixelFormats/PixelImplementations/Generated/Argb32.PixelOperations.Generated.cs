@@ -222,6 +222,14 @@ namespace SixLabors.ImageSharp.PixelFormats
                     dp.FromArgb32(sp);
                 }
             }
+            /// <inheritdoc />
+            internal override void From<TSourcePixel>(
+                Configuration configuration,
+                ReadOnlySpan<TSourcePixel> sourcePixels,
+                Span<Argb32> destinationPixels)
+            {
+                PixelOperations<TSourcePixel>.Instance.ToArgb32(configuration, sourcePixels, destinationPixels);
+            }
         }
     }
 }
