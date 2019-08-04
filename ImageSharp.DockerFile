@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/core/sdk:2.2-stretch AS builder
+FROM mcr.microsoft.com/dotnet/core/sdk:2.2.401-bionic AS builder
 MAINTAINER Brian Popow <popow@gmx.de>
 
 ENV TERM xterm
@@ -9,7 +9,7 @@ RUN dotnet restore
 RUN dotnet build
 RUN dotnet publish -c Release -o out
 
-FROM mcr.microsoft.com/dotnet/core/runtime:2.2.5-stretch-slim-arm32v7 as runtime
+FROM mcr.microsoft.com/dotnet/core/runtime:2.2.6-bionic-arm32v7 as runtime
 WORKDIR /app
 COPY --from=builder /app/tests/ImageSharp.DockerSandbox/out/ .
 WORKDIR /app/
