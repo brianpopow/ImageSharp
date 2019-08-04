@@ -17,6 +17,20 @@ namespace ImageSharp.DockerSandbox
                 fs.Close();
             }
 
+            using (var fs = new FileStream("/app/docker_output/car_output.png", FileMode.Create))
+            {
+                carImage.SaveAsPng(fs);
+                fs.Flush();
+                fs.Close();
+            }
+
+            using (var fs = new FileStream("/app/docker_output/car_output.bmp", FileMode.Create))
+            {
+                carImage.SaveAsBmp(fs);
+                fs.Flush();
+                fs.Close();
+            }
+
             var lakeImage = Image.Load<Rgba32>(@"Lake.jpg");
             using (var fs = new FileStream("/app/docker_output/lake_output.jpg", FileMode.Create))
             {
