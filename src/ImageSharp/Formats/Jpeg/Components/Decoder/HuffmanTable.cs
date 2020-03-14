@@ -1,20 +1,18 @@
-﻿// Copyright (c) Six Labors and contributors.
+// Copyright (c) Six Labors and contributors.
 // Licensed under the Apache License, Version 2.0.
 
 using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using SixLabors.Memory;
 
 namespace SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder
 {
     /// <summary>
-    /// Represents a Huffman coding table containing basic coding data plus tables for accellerated computation.
+    /// Represents a Huffman coding table containing basic coding data plus tables for accelerated computation.
     /// </summary>
     [StructLayout(LayoutKind.Sequential)]
     internal unsafe struct HuffmanTable
     {
-        private readonly MemoryAllocator memoryAllocator;
         private bool isConfigured;
 
         /// <summary>
@@ -60,13 +58,11 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder
         /// <summary>
         /// Initializes a new instance of the <see cref="HuffmanTable"/> struct.
         /// </summary>
-        /// <param name="memoryAllocator">The <see cref="MemoryAllocator"/> to use for buffer allocations.</param>
         /// <param name="codeLengths">The code lengths</param>
         /// <param name="values">The huffman values</param>
-        public HuffmanTable(MemoryAllocator memoryAllocator, ReadOnlySpan<byte> codeLengths, ReadOnlySpan<byte> values)
+        public HuffmanTable(ReadOnlySpan<byte> codeLengths, ReadOnlySpan<byte> values)
         {
             this.isConfigured = false;
-            this.memoryAllocator = memoryAllocator;
             Unsafe.CopyBlockUnaligned(ref this.Sizes[0], ref MemoryMarshal.GetReference(codeLengths), (uint)codeLengths.Length);
             Unsafe.CopyBlockUnaligned(ref this.Values[0], ref MemoryMarshal.GetReference(values), (uint)values.Length);
         }
@@ -81,33 +77,31 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder
                 return;
             }
 
-            int p, si;
-            Span<char> huffsize = stackalloc char[257];
-            Span<uint> huffcode = stackalloc uint[257];
-            uint code;
+            Span<char> huffSize = stackalloc char[257];
+            Span<uint> huffCode = stackalloc uint[257];
 
             // Figure C.1: make table of Huffman code length for each symbol
-            p = 0;
-            for (int l = 1; l <= 16; l++)
+            int p = 0;
+            for (int j = 1; j <= 16; j++)
             {
-                int i = this.Sizes[l];
+                int i = this.Sizes[j];
                 while (i-- != 0)
                 {
-                    huffsize[p++] = (char)l;
+                    huffSize[p++] = (char)j;
                 }
             }
 
-            huffsize[p] = (char)0;
+            huffSize[p] = (char)0;
 
             // Figure C.2: generate the codes themselves
-            code = 0;
-            si = huffsize[0];
+            uint code = 0;
+            int si = huffSize[0];
             p = 0;
-            while (huffsize[p] != 0)
+            while (huffSize[p] != 0)
             {
-                while (huffsize[p] == si)
+                while (huffSize[p] == si)
                 {
-                    huffcode[p++] = code;
+                    huffCode[p++] = code;
                     code++;
                 }
 
@@ -117,20 +111,19 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder
 
             // Figure F.15: generate decoding tables for bit-sequential decoding
             p = 0;
-            for (int l = 1; l <= 16; l++)
+            for (int j = 1; j <= 16; j++)
             {
-                if (this.Sizes[l] != 0)
+                if (this.Sizes[j] != 0)
                 {
-                    int offset = p - (int)huffcode[p];
-                    this.ValOffset[l] = offset;
-                    p += this.Sizes[l];
-                    this.MaxCode[l] = huffcode[p - 1]; // Maximum code of length l
-                    this.MaxCode[l] <<= 64 - l; // Left justify
-                    this.MaxCode[l] |= (1ul << (64 - l)) - 1;
+                    this.ValOffset[j] = p - (int)huffCode[p];
+                    p += this.Sizes[j];
+                    this.MaxCode[j] = huffCode[p - 1]; // Maximum code of length l
+                    this.MaxCode[j] <<= JpegConstants.Huffman.RegisterSize - j; // Left justify
+                    this.MaxCode[j] |= (1ul << (JpegConstants.Huffman.RegisterSize - j)) - 1;
                 }
                 else
                 {
-                    this.MaxCode[l] = 0;
+                    this.MaxCode[j] = 0;
                 }
             }
 
@@ -148,16 +141,17 @@ namespace SixLabors.ImageSharp.Formats.Jpeg.Components.Decoder
             p = 0;
             for (int length = 1; length <= JpegConstants.Huffman.LookupBits; length++)
             {
+                int jShift = JpegConstants.Huffman.LookupBits - length;
                 for (int i = 1; i <= this.Sizes[length]; i++, p++)
                 {
-                    // length = current code's length, p = its index in huffcode[] & huffval[].
+                    // length = current code's length, p = its index in huffCode[] & Values[].
                     // Generate left-justified code followed by all possible bit sequences
-                    int lookbits = (int)(huffcode[p] << (JpegConstants.Huffman.LookupBits - length));
+                    int lookBits = (int)(huffCode[p] << jShift);
                     for (int ctr = 1 << (JpegConstants.Huffman.LookupBits - length); ctr > 0; ctr--)
                     {
-                        this.LookaheadSize[lookbits] = (byte)length;
-                        this.LookaheadValue[lookbits] = this.Values[p];
-                        lookbits++;
+                        this.LookaheadSize[lookBits] = (byte)length;
+                        this.LookaheadValue[lookBits] = this.Values[p];
+                        lookBits++;
                     }
                 }
             }
