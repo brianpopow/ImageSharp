@@ -11,12 +11,6 @@ on:
             - master
 
 jobs:
-    DockerCompose:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Use docker compose
-        run: docker-compose up -d
     Build:
         strategy:
             matrix:
