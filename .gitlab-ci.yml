@@ -10,6 +10,7 @@ test:
   script:
   - apt-get update
   - apt-get -y install libgdiplus libgif-dev autoconf libtool automake build-essential gettext libglib2.0-dev libcairo2-dev libtiff-dev libexif-dev
+  - git clone https://github.com/SixLabors/ImageSharp
   - git submodule -q update --init
   - dotnet restore
   - dotnet test tests/ImageSharp.Tests/ImageSharp.Tests.csproj -c Release -f "netcoreapp3.1"
